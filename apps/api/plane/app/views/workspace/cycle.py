@@ -39,7 +39,7 @@ class WorkspaceCyclesEndpoint(BaseAPIView):
             )
             .annotate(
                 completed_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="completed",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -51,7 +51,7 @@ class WorkspaceCyclesEndpoint(BaseAPIView):
             )
             .annotate(
                 cancelled_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="cancelled",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -63,7 +63,7 @@ class WorkspaceCyclesEndpoint(BaseAPIView):
             )
             .annotate(
                 started_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="started",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -75,7 +75,7 @@ class WorkspaceCyclesEndpoint(BaseAPIView):
             )
             .annotate(
                 unstarted_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="unstarted",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -87,7 +87,7 @@ class WorkspaceCyclesEndpoint(BaseAPIView):
             )
             .annotate(
                 backlog_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="backlog",
                         issue_cycle__issue__archived_at__isnull=True,
