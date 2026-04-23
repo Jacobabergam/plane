@@ -109,7 +109,7 @@ class CycleListCreateAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 completed_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="completed",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -120,7 +120,7 @@ class CycleListCreateAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 cancelled_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="cancelled",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -131,7 +131,7 @@ class CycleListCreateAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 started_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="started",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -142,7 +142,7 @@ class CycleListCreateAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 unstarted_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="unstarted",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -153,7 +153,7 @@ class CycleListCreateAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 backlog_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="backlog",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -387,7 +387,7 @@ class CycleDetailAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 completed_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="completed",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -398,7 +398,7 @@ class CycleDetailAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 cancelled_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="cancelled",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -409,7 +409,7 @@ class CycleDetailAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 started_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="started",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -420,7 +420,7 @@ class CycleDetailAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 unstarted_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="unstarted",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -431,7 +431,7 @@ class CycleDetailAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 backlog_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="backlog",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -635,7 +635,7 @@ class CycleArchiveUnarchiveAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 completed_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="completed",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -646,7 +646,7 @@ class CycleArchiveUnarchiveAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 cancelled_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="cancelled",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -657,7 +657,7 @@ class CycleArchiveUnarchiveAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 started_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="started",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -668,7 +668,7 @@ class CycleArchiveUnarchiveAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 unstarted_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="unstarted",
                         issue_cycle__issue__archived_at__isnull=True,
@@ -679,7 +679,7 @@ class CycleArchiveUnarchiveAPIEndpoint(BaseAPIView):
             )
             .annotate(
                 backlog_issues=Count(
-                    "issue_cycle__issue__state__group",
+                    "issue_cycle__issue__id",
                     filter=Q(
                         issue_cycle__issue__state__group="backlog",
                         issue_cycle__issue__archived_at__isnull=True,
