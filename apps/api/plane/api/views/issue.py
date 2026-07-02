@@ -752,6 +752,16 @@ class IssueDetailAPIEndpoint(BaseAPIView):
                 current_instance=current_instance,
                 epoch=int(timezone.now().timestamp()),
             )
+            # Send the model activity
+            model_activity.delay(
+                model_name="issue",
+                model_id=str(pk),
+                requested_data=request.data,
+                current_instance=current_instance,
+                actor_id=request.user.id,
+                slug=slug,
+                origin=base_host(request=request, is_app=True),
+            )
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

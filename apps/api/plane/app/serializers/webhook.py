@@ -38,7 +38,8 @@ class WebhookSerializer(DynamicBaseSerializer):
 
         for addr in ip_addresses:
             ip = ipaddress.ip_address(addr[4][0])
-            if ip.is_private or ip.is_loopback or ip.is_reserved or ip.is_link_local:
+            # Homelab: allow RFC1918 LAN targets; still block loopback/reserved/link-local
+            if ip.is_loopback or ip.is_reserved or ip.is_link_local:
                 raise serializers.ValidationError({"url": "URL resolves to a blocked IP address."})
 
         # Additional validation for multiple request domains and their subdomains
@@ -73,7 +74,8 @@ class WebhookSerializer(DynamicBaseSerializer):
 
             for addr in ip_addresses:
                 ip = ipaddress.ip_address(addr[4][0])
-                if ip.is_private or ip.is_loopback or ip.is_reserved or ip.is_link_local:
+                # Homelab: allow RFC1918 LAN targets; still block loopback/reserved/link-local
+                if ip.is_loopback or ip.is_reserved or ip.is_link_local:
                     raise serializers.ValidationError({"url": "URL resolves to a blocked IP address."})
 
             # Additional validation for multiple request domains and their subdomains
