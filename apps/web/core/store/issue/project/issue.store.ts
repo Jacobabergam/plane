@@ -36,6 +36,7 @@ export interface IProjectIssues extends IBaseIssuesStore {
     projectId: string,
     loadType: TLoader
   ) => Promise<TIssuesResponse | undefined>;
+  refetchIssuesSilently: (workspaceSlug: string, projectId: string) => Promise<TIssuesResponse | undefined>;
   fetchNextIssues: (
     workspaceSlug: string,
     projectId: string,
@@ -69,6 +70,7 @@ export class ProjectIssues extends BaseIssuesStore implements IProjectIssues {
       fetchIssues: action,
       fetchNextIssues: action,
       fetchIssuesWithExistingPagination: action,
+      refetchIssuesSilently: action,
 
       quickAddIssue: action,
     });
@@ -182,6 +184,37 @@ export class ProjectIssues extends BaseIssuesStore implements IProjectIssues {
   ) => {
     if (!this.paginationOptions) return;
     return await this.fetchIssues(workspaceSlug, projectId, loadType, this.paginationOptions, true);
+  };
+
+  /**
+   * homelab addition (not upstream). Refetch page one with the existing
+   * pagination WITHOUT the pre-fetch `clear()` that fetchIssues does, so the
+   * board never drops to the loading skeleton: `onfetchIssues` clears and
+   * repopulates atomically inside one runInAction, so observers only ever see
+   * the finished swap and unchanged cards keep rendering throughout. Used by
+   * the /rt/events live-refresh path (use-live-issue-refresh), where a push
+   * update should move cards in place — the skeleton is initial-load UX.
+   */
+  refetchIssuesSilently = async (workspaceSlug: string, projectId: string) => {
+    if (!this.paginationOptions) return;
+    try {
+      this.setLoader("mutation"); // corner spinner only — grouped ids stay intact
+      const params = this.issueFilterStore?.getFilterParams(
+        this.paginationOptions,
+        projectId,
+        undefined,
+        undefined,
+        undefined
+      );
+      const response = await this.issueService.getIssues(workspaceSlug, projectId, params, {
+        signal: this.controller.signal,
+      });
+      this.onfetchIssues(response, this.paginationOptions, workspaceSlug, projectId, undefined, false);
+      return response;
+    } catch (error) {
+      this.setLoader(undefined);
+      throw error;
+    }
   };
 
   /**

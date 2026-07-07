@@ -65,10 +65,11 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
   );
 
   // homelab: silent board refetch on server-side issue changes (SSE tick) so
-  // agent-driven card moves show up without a manual refresh. The "mutation"
-  // load type reuses the corner spinner below instead of the full-page loader.
+  // agent-driven card moves show up without a manual refresh. Must be the
+  // silent variant — fetchIssues pre-clears the grouped ids to show the
+  // loading skeleton, which is initial-load UX, not push-update UX.
   useLiveIssueRefresh(projectId, () => {
-    if (workspaceSlug && projectId) void issues?.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
+    if (workspaceSlug && projectId) void issues?.refetchIssuesSilently(workspaceSlug, projectId);
   });
 
   if (!workspaceSlug || !projectId || !workItemFilters) return <></>;
