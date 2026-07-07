@@ -60,6 +60,17 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* homelab: (1) WebKit lacks requestIdleCallback and v1.3.1 calls it
+            unguarded — polyfill first-thing or iOS crashes on every workspace
+            page; (2) phones get the sidebar collapsed so its overlay doesn't
+            swallow board taps. Baked in here (prerendered into index.html)
+            instead of the old web-patches/index.html bind mount. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'window.requestIdleCallback=window.requestIdleCallback||function(cb){var s=Date.now();return setTimeout(function(){cb({didTimeout:false,timeRemaining:function(){return Math.max(0,50-(Date.now()-s))}})},1)};window.cancelIdleCallback=window.cancelIdleCallback||function(id){clearTimeout(id)};try{if(screen.width<768)localStorage.setItem("app_sidebar_collapsed","true")}catch(e){}',
+          }}
+        />
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#fff" />

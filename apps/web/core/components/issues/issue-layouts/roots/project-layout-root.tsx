@@ -17,6 +17,7 @@ import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
+import { useLiveIssueRefresh } from "@/hooks/use-live-issue-refresh";
 // local imports
 import { IssuePeekOverview } from "../../peek-overview";
 import { CalendarLayout } from "../calendar/roots/project-root";
@@ -62,6 +63,13 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
     },
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
+
+  // homelab: silent board refetch on server-side issue changes (SSE tick) so
+  // agent-driven card moves show up without a manual refresh. The "mutation"
+  // load type reuses the corner spinner below instead of the full-page loader.
+  useLiveIssueRefresh(projectId, () => {
+    if (workspaceSlug && projectId) void issues?.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
+  });
 
   if (!workspaceSlug || !projectId || !workItemFilters) return <></>;
   return (
