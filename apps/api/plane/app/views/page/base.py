@@ -85,7 +85,7 @@ class PageViewSet(BaseViewSet):
             entity_identifier=OuterRef("pk"),
             workspace__slug=self.kwargs.get("slug"),
         )
-        queryset = self.filter_queryset(
+        return self.filter_queryset(
             super()
             .get_queryset()
             .filter(workspace__slug=self.kwargs.get("slug"))
@@ -94,6 +94,7 @@ class PageViewSet(BaseViewSet):
                 projects__project_projectmember__is_active=True,
                 projects__archived_at__isnull=True,
             )
+            .filter(parent__isnull=True)
             .filter(Q(owned_by=self.request.user) | Q(access=0))
             .prefetch_related("projects")
             .select_related("workspace")
@@ -124,12 +125,6 @@ class PageViewSet(BaseViewSet):
             .filter(project=True)
             .distinct()
         )
-        # The list stays top-level unless the client asks for the tree. Retrieve and
-        # create must still resolve a page that has a parent.
-        include_nested = str(self.request.GET.get("include_nested", "")).lower() == "true"
-        if self.action == "list" and not include_nested:
-            queryset = queryset.filter(parent__isnull=True)
-        return queryset
 
     def create(self, request, slug, project_id):
         serializer = PageSerializer(
