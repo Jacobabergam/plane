@@ -12,6 +12,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // components
 import type { LinkViewProps } from "@/components/links";
 import { LinkView } from "@/components/links";
+// helpers
+import { findLinkAnchor, followEditorLink } from "@/extensions/custom-link/helpers/link-navigation";
+
+const TOUCH_LONG_PRESS_MS = 450;
+const TOUCH_MOVE_TOLERANCE_PX = 10;
 
 type Props = {
   editor: Editor;
@@ -23,6 +28,18 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [virtualElement, setVirtualElement] = useState<Element | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
+  const suppressHoverRef = useRef(false);
+  const openedFromTouchRef = useRef(false);
+  const touchStateRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    longPressTimer: null as number | null,
+    longPressFired: false,
+    moved: false,
+    anchor: null as HTMLAnchorElement | null,
+  });
+  const consumeClickTokenRef = useRef(0);
 
   const editorState = useEditorState({
     editor,
@@ -66,18 +83,21 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
   const setCloseTimeout = useCallback(() => {
     clearHoverTimeout();
     hoverTimeoutRef.current = window.setTimeout(() => {
+      openedFromTouchRef.current = false;
       setIsOpen(false);
       editorState.linkExtensionStorage.isPreviewOpen = false;
     }, 400);
   }, [clearHoverTimeout, editorState.linkExtensionStorage]);
 
-  const handleLinkHover = useCallback(
-    (event: MouseEvent) => {
-      if (!editor || editorState.linkExtensionStorage?.isBubbleMenuOpen) return;
+  const closeLinkView = useCallback(() => {
+    openedFromTouchRef.current = false;
+    setIsOpen(false);
+    editorState.linkExtensionStorage.isPreviewOpen = false;
+  }, [editorState.linkExtensionStorage]);
 
-      // Find the closest anchor tag from the event target
-      const target = (event.target as HTMLElement)?.closest("a");
-      if (!target) return;
+  const presentLinkPreview = useCallback(
+    (target: HTMLAnchorElement, source: "hover" | "touch") => {
+      if (!editor || editorState.linkExtensionStorage?.isBubbleMenuOpen) return;
 
       const referenceProps = getReferenceProps();
       Object.entries(referenceProps).forEach(([key, value]) => {
@@ -97,24 +117,19 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
         const linkMark = node.marks?.find((mark) => mark.type.name === "link");
         if (!linkMark) return;
 
+        openedFromTouchRef.current = source === "touch";
         setVirtualElement(target);
-
-        // Clear any pending close timeout when hovering over a link
         clearHoverTimeout();
 
-        // Only update if not already open or if hovering over a different link
         if (!isOpen || (linkViewProps && (linkViewProps.from !== pos || linkViewProps.to !== pos + node.nodeSize))) {
           setLinkViewProps({
-            view: "LinkPreview", // Always start with preview for new links
+            view: "LinkPreview",
             url: linkMark.attrs.href,
             text: node.text || "",
             editor: editor,
             from: pos,
             to: pos + node.nodeSize,
-            closeLinkView: () => {
-              setIsOpen(false);
-              editorState.linkExtensionStorage.isPreviewOpen = false;
-            },
+            closeLinkView,
           });
           setIsOpen(true);
         }
@@ -122,7 +137,26 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
         console.error("Error handling link hover:", error);
       }
     },
-    [editor, editorState.linkExtensionStorage, getReferenceProps, isOpen, linkViewProps, clearHoverTimeout]
+    [
+      editor,
+      editorState.linkExtensionStorage,
+      getReferenceProps,
+      isOpen,
+      linkViewProps,
+      clearHoverTimeout,
+      closeLinkView,
+    ]
+  );
+
+  const handleLinkHover = useCallback(
+    (event: MouseEvent) => {
+      // A touch tap synthesizes mouseover. Ignore it so the tooltip does not swallow the tap.
+      if (suppressHoverRef.current) return;
+      const target = findLinkAnchor(event.target, containerRef.current);
+      if (!target) return;
+      presentLinkPreview(target, "hover");
+    },
+    [containerRef, presentLinkPreview]
   );
 
   // Handle mouse enter on floating element (cancel close timeout)
@@ -132,6 +166,7 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
 
   // Handle mouse leave from floating element (start close timeout)
   const handleFloatingMouseLeave = useCallback(() => {
+    if (openedFromTouchRef.current) return;
     setCloseTimeout();
   }, [setCloseTimeout]);
 
@@ -142,7 +177,7 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
 
   const handleContainerMouseLeave = useCallback(
     (event: MouseEvent) => {
-      if (!editor || !isOpen) return;
+      if (!editor || !isOpen || openedFromTouchRef.current) return;
 
       // Check if mouse is truly leaving the container area
       const relatedTarget = event.relatedTarget as HTMLElement;
@@ -181,12 +216,139 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleLinkHover, handleContainerMouseEnter, handleContainerMouseLeave]);
 
+  // Touch taps follow the link. A long-press opens the same preview so Edit stays reachable.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !editor) return;
+
+    const clearLongPress = () => {
+      const state = touchStateRef.current;
+      if (state.longPressTimer === null) return;
+      window.clearTimeout(state.longPressTimer);
+      state.longPressTimer = null;
+    };
+
+    const armConsumeNextClick = () => {
+      const storage = editor.storage.link;
+      if (!storage) return;
+      const token = consumeClickTokenRef.current + 1;
+      consumeClickTokenRef.current = token;
+      storage.consumeNextLinkClick = true;
+      window.setTimeout(() => {
+        if (consumeClickTokenRef.current !== token) return;
+        storage.consumeNextLinkClick = false;
+      }, 700);
+    };
+
+    const releaseHoverSuppression = () => {
+      window.setTimeout(() => {
+        suppressHoverRef.current = false;
+      }, 500);
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") {
+        suppressHoverRef.current = false;
+        return;
+      }
+
+      suppressHoverRef.current = true;
+      const state = touchStateRef.current;
+      clearLongPress();
+      state.pointerId = event.pointerId;
+      state.startX = event.clientX;
+      state.startY = event.clientY;
+      state.longPressFired = false;
+      state.moved = false;
+      state.anchor = findLinkAnchor(event.target, container);
+      if (!state.anchor) return;
+
+      state.longPressTimer = window.setTimeout(() => {
+        state.longPressFired = true;
+      }, TOUCH_LONG_PRESS_MS);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") return;
+      const state = touchStateRef.current;
+      if (event.pointerId !== state.pointerId) return;
+      const dx = event.clientX - state.startX;
+      const dy = event.clientY - state.startY;
+      if (dx * dx + dy * dy <= TOUCH_MOVE_TOLERANCE_PX * TOUCH_MOVE_TOLERANCE_PX) return;
+      state.moved = true;
+      clearLongPress();
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") return;
+      const state = touchStateRef.current;
+      if (state.pointerId !== -1 && event.pointerId !== state.pointerId) return;
+
+      clearLongPress();
+      const anchor = state.anchor;
+      const shouldEdit = state.longPressFired && !state.moved;
+      const moved = state.moved;
+      state.anchor = null;
+      state.pointerId = -1;
+      state.longPressFired = false;
+      releaseHoverSuppression();
+
+      if (!anchor) return;
+      if (moved) {
+        armConsumeNextClick();
+        return;
+      }
+
+      if (shouldEdit) {
+        armConsumeNextClick();
+        event.preventDefault();
+        presentLinkPreview(anchor, "touch");
+        return;
+      }
+
+      const href = anchor.getAttribute("href");
+      if (!href || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+
+      armConsumeNextClick();
+      event.preventDefault();
+      followEditorLink({
+        href,
+        navigateInternalLink: editor.storage.link?.navigateInternalLink,
+      });
+    };
+
+    const onPointerCancel = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") return;
+      clearLongPress();
+      const state = touchStateRef.current;
+      state.anchor = null;
+      state.pointerId = -1;
+      state.longPressFired = false;
+      state.moved = false;
+      releaseHoverSuppression();
+    };
+
+    container.addEventListener("pointerdown", onPointerDown, true);
+    container.addEventListener("pointermove", onPointerMove, true);
+    container.addEventListener("pointerup", onPointerUp, true);
+    container.addEventListener("pointercancel", onPointerCancel, true);
+
+    return () => {
+      clearLongPress();
+      container.removeEventListener("pointerdown", onPointerDown, true);
+      container.removeEventListener("pointermove", onPointerMove, true);
+      container.removeEventListener("pointerup", onPointerUp, true);
+      container.removeEventListener("pointercancel", onPointerCancel, true);
+    };
+  }, [containerRef, editor, presentLinkPreview]);
+
   // Cleanup timeout on unmount
   useEffect(() => () => clearHoverTimeout(), [clearHoverTimeout]);
 
   // Close link view when bubble menu opens
   useEffect(() => {
     if (editorState.linkExtensionStorage?.isBubbleMenuOpen && isOpen) {
+      openedFromTouchRef.current = false;
       setIsOpen(false);
     }
   }, [editorState.linkExtensionStorage, isOpen]);

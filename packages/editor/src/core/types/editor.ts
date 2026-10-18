@@ -170,6 +170,8 @@ export type IEditorProps = {
   id: string;
   initialValue: string;
   isTouchDevice?: boolean;
+  /** Relative and same-origin link clicks call this instead of opening a new tab. */
+  navigateInternalLink?: ((path: string) => void) | null;
   mentionHandler: TMentionHandler;
   onAssetChange?: (assets: TEditorAsset[]) => void;
   onEditorFocus?: () => void;

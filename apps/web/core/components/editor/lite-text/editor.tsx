@@ -18,6 +18,7 @@ import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";
 // hooks
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
+import { useInternalLinkNavigation } from "@/hooks/use-internal-link-navigation";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // plane web hooks
@@ -111,6 +112,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
+  const navigateInternalLink = useInternalLinkNavigation();
   function isMutableRefObject<T>(ref: React.ForwardedRef<T>): ref is React.MutableRefObject<T | null> {
     return !!ref && typeof ref === "object" && "current" in ref;
   }
@@ -170,6 +172,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             extendedEditorProps={{}}
             editorClassName={editorClassName}
             {...rest}
+            navigateInternalLink={navigateInternalLink}
           />
         </div>
 

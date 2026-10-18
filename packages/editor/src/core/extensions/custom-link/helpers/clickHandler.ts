@@ -4,48 +4,51 @@
  * See the LICENSE file for details.
  */
 
-import { getAttributes } from "@tiptap/core";
+import type { Editor } from "@tiptap/core";
 import type { MarkType } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
+// constants
+import { CORE_EXTENSIONS } from "@/constants/extension";
+// local imports
+import { findLinkAnchor, followEditorLink } from "./link-navigation";
 
 type ClickHandlerOptions = {
   type: MarkType;
+  editor: Editor;
 };
+
+const hasModifiedClick = (event: MouseEvent): boolean =>
+  event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
 
 export function clickHandler(options: ClickHandlerOptions): Plugin {
   return new Plugin({
     key: new PluginKey("handleClickLink"),
     props: {
-      handleClick: (view, pos, event) => {
-        if (event.button !== 0) {
-          return false;
-        }
+      handleClick: (view, _pos, event) => {
+        if (hasModifiedClick(event)) return false;
 
-        let a = event.target as HTMLElement;
-        const els: HTMLElement[] = [];
+        const anchor = findLinkAnchor(event.target, view.dom);
+        if (!anchor) return false;
 
-        while (a?.nodeName !== "DIV") {
-          els.push(a);
-          a = a?.parentNode as HTMLElement;
-        }
-
-        if (!els.find((value) => value.nodeName === "A")) {
-          return false;
-        }
-
-        const attrs = getAttributes(view.state, options.type.name);
-        const link = event.target as HTMLLinkElement;
-
-        const href = link?.href ?? attrs.href;
-        const target = link?.target ?? attrs.target;
-
-        if (link && href) {
-          window.open(href, target);
-
+        const storage = options.editor.storage[CORE_EXTENSIONS.CUSTOM_LINK];
+        // A touch long-press opens the edit tooltip and must not also navigate.
+        if (storage?.consumeNextLinkClick) {
+          storage.consumeNextLinkClick = false;
+          event.preventDefault();
           return true;
         }
 
-        return false;
+        const href = anchor.getAttribute("href");
+        if (!href) return false;
+
+        const result = followEditorLink({
+          href,
+          navigateInternalLink: storage?.navigateInternalLink,
+        });
+        if (result === "ignored") return false;
+
+        event.preventDefault();
+        return true;
       },
     },
   });

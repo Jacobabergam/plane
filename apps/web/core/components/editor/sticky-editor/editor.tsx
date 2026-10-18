@@ -16,6 +16,7 @@ import type { TSticky } from "@plane/types";
 import { cn } from "@plane/utils";
 // hooks
 import { useEditorConfig } from "@/hooks/editor";
+import { useInternalLinkNavigation } from "@/hooks/use-internal-link-navigation";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // plane web hooks
 import { useEditorFlagging } from "@/plane-web/hooks/use-editor-flagging";
@@ -74,6 +75,7 @@ export const StickyEditor = React.forwardRef(function StickyEditor(
   });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
+  const navigateInternalLink = useInternalLinkNavigation();
   function isMutableRefObject<T>(ref: React.ForwardedRef<T>): ref is React.MutableRefObject<T | null> {
     return !!ref && typeof ref === "object" && "current" in ref;
   }
@@ -105,6 +107,7 @@ export const StickyEditor = React.forwardRef(function StickyEditor(
         extendedEditorProps={{}}
         containerClassName={cn(containerClassName, "relative")}
         {...rest}
+        navigateInternalLink={navigateInternalLink}
       />
       {showToolbar && (
         <div

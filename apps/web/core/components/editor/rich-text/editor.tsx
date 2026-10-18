@@ -14,6 +14,7 @@ import { cn } from "@plane/utils";
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 // hooks
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
+import { useInternalLinkNavigation } from "@/hooks/use-internal-link-navigation";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // plane web hooks
@@ -65,6 +66,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
   });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
+  const navigateInternalLink = useInternalLinkNavigation();
   // parse content
   const { getEditorMetaData } = useParseEditorContent({
     projectId,
@@ -98,6 +100,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
       }}
       extendedEditorProps={{}}
       {...rest}
+      navigateInternalLink={navigateInternalLink}
       containerClassName={cn("relative pb-3 pl-3", containerClassName)}
     />
   );

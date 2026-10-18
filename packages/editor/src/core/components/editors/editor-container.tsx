@@ -27,13 +27,12 @@ type Props = {
   editor: Editor;
   editorContainerClassName: string;
   id: string;
-  isTouchDevice: boolean;
   provider?: HocuspocusProvider | undefined;
   state?: TCollabValue["state"];
 };
 
 export function EditorContainer(props: Props) {
-  const { children, displayConfig, editor, editorContainerClassName, id, isTouchDevice, provider, state } = props;
+  const { children, displayConfig, editor, editorContainerClassName, id, provider, state } = props;
   // refs
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScrolledOnce = useRef(false);
@@ -178,7 +177,8 @@ export function EditorContainer(props: Props) {
         )}
       >
         {children}
-        {!isTouchDevice && <LinkContainer editor={editor} containerRef={containerRef} />}
+        {/* Mounted on touch too: a tap follows the link, and a long-press still opens the edit tooltip. */}
+        <LinkContainer editor={editor} containerRef={containerRef} />
       </div>
     </>
   );

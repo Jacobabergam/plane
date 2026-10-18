@@ -12,6 +12,7 @@ import type { MakeOptional, TSearchEntityRequestPayload, TSearchResponse } from 
 import { cn } from "@plane/utils";
 // hooks
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
+import { useInternalLinkNavigation } from "@/hooks/use-internal-link-navigation";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // plane web hooks
@@ -72,6 +73,7 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
   });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
+  const navigateInternalLink = useInternalLinkNavigation();
 
   return (
     <DocumentEditorWithRef
@@ -98,6 +100,7 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
       }}
       extendedEditorProps={extendedEditorProps}
       {...rest}
+      navigateInternalLink={navigateInternalLink}
       containerClassName={cn("relative pb-3 pl-3", containerClassName)}
     />
   );

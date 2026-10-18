@@ -7,6 +7,8 @@
 import { useEditorState, useEditor as useTiptapEditor } from "@tiptap/react";
 import { useImperativeHandle, useEffect } from "react";
 import type { MarkdownStorage } from "tiptap-markdown";
+// constants
+import { CORE_EXTENSIONS } from "@/constants/extension";
 // extensions
 import { CoreEditorExtensions } from "@/extensions";
 // helpers
@@ -40,6 +42,7 @@ export const useEditor = (props: TEditorHookProps) => {
     id = "",
     initialValue,
     isTouchDevice,
+    navigateInternalLink,
     mentionHandler,
     onAssetChange,
     onChange,
@@ -75,6 +78,7 @@ export const useEditor = (props: TEditorHookProps) => {
           flaggedExtensions,
           getEditorMetaData,
           isTouchDevice,
+          navigateInternalLink,
           mentionHandler,
           placeholder,
           showPlaceholderOnEmpty,
@@ -98,6 +102,14 @@ export const useEditor = (props: TEditorHookProps) => {
     },
     [editable]
   );
+
+  // The editor instance is created once. Keep the router callback current without recreating it.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const linkStorage = editor.storage[CORE_EXTENSIONS.CUSTOM_LINK];
+    if (!linkStorage) return;
+    linkStorage.navigateInternalLink = navigateInternalLink ?? null;
+  }, [editor, navigateInternalLink]);
 
   // Effect for syncing SWR data
   useEffect(() => {
