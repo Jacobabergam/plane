@@ -22,7 +22,12 @@ export class ProjectPageService extends APIService {
   }
 
   async fetchAll(workspaceSlug: string, projectId: string): Promise<TPage[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/`)
+    // include_nested is optional on the API. When the server ignores it, the list stays top-level only.
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/`, {
+      params: {
+        include_nested: true,
+      },
+    })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

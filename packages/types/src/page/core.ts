@@ -21,6 +21,8 @@ export type TPage = {
   is_locked: boolean;
   label_ids: string[] | undefined;
   name: string | undefined;
+  /** Parent page id. Null or omitted means a top-level page. */
+  parent?: string | null | undefined;
   owned_by: string | undefined;
   project_ids?: string[] | undefined;
   updated_at: Date | undefined;
