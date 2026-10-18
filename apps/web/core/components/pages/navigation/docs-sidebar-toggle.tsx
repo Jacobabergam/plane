@@ -5,14 +5,19 @@
  */
 
 import { ListTree } from "lucide-react";
+import { observer } from "mobx-react";
 // plane imports
 import { IconButton } from "@plane/propel/icon-button";
+// hooks
+import { useProject } from "@/hooks/store/use-project";
 // local imports
 import { useDocsSidebar } from "./docs-sidebar-context";
 
-export function DocsSidebarToggle() {
+export const DocsSidebarToggle = observer(function DocsSidebarToggle() {
   const sidebar = useDocsSidebar();
-  if (!sidebar) return null;
+  const { currentProjectDetails } = useProject();
+  // The sidebar is not rendered when the project has pages disabled, so neither is its toggle.
+  if (!sidebar || currentProjectDetails?.page_view === false) return null;
 
   const { isDesktopOpen, isMobile, isMobileOpen, setDesktopOpen, setMobileOpen } = sidebar;
   const isOpen = isMobile ? isMobileOpen : isDesktopOpen;
@@ -30,4 +35,4 @@ export function DocsSidebarToggle() {
       }}
     />
   );
-}
+});

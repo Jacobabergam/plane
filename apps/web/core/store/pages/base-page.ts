@@ -430,9 +430,6 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       runInAction(() => {
         for (const page of this.getDescendantPages()) {
           page.archived_at = archivedAt;
-          if (page.id && this.rootStore.favorite.entityMap[page.id]) {
-            this.rootStore.favorite.removeFavoriteFromStore(page.id);
-          }
         }
       });
     } catch (error) {

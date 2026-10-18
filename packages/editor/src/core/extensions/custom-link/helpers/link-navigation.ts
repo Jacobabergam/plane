@@ -65,6 +65,15 @@ export const findLinkAnchor = (target: EventTarget | null, boundary?: Node | nul
   return anchor;
 };
 
+/**
+ * True when the anchor is a node view's own chrome (a mention, an embed card), not a link mark
+ * inside a node view's editable content such as a callout paragraph.
+ */
+export const isNodeViewChrome = (anchor: Element): boolean => {
+  const host = anchor.closest("[data-node-view-wrapper],[data-node-view-content]");
+  return !!host?.hasAttribute("data-node-view-wrapper");
+};
+
 export type FollowEditorLinkArgs = {
   href: string;
   navigateInternalLink?: NavigateInternalLink | null;

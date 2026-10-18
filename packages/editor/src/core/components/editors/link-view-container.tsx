@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { LinkViewProps } from "@/components/links";
 import { LinkView } from "@/components/links";
 // helpers
-import { findLinkAnchor, followEditorLink } from "@/extensions/custom-link/helpers/link-navigation";
+import { findLinkAnchor, followEditorLink, isNodeViewChrome } from "@/extensions/custom-link/helpers/link-navigation";
 
 const TOUCH_LONG_PRESS_MS = 450;
 const TOUCH_MOVE_TOLERANCE_PX = 10;
@@ -260,7 +260,9 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
       state.startY = event.clientY;
       state.longPressFired = false;
       state.moved = false;
-      state.anchor = findLinkAnchor(event.target, container);
+      const anchor = findLinkAnchor(event.target, container);
+      // A node view's own anchor (a mention) is not a link mark; the pointerup path must not navigate it.
+      state.anchor = anchor && !isNodeViewChrome(anchor) ? anchor : null;
       if (!state.anchor) return;
 
       state.longPressTimer = window.setTimeout(() => {

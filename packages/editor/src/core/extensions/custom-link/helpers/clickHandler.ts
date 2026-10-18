@@ -7,17 +7,20 @@
 import type { Editor } from "@tiptap/core";
 import type { MarkType } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // local imports
-import { findLinkAnchor, followEditorLink } from "./link-navigation";
+import { findLinkAnchor, followEditorLink, isNodeViewChrome } from "./link-navigation";
 
 type ClickHandlerOptions = {
   type: MarkType;
   editor: Editor;
 };
 
-const wantsNewTab = (event: MouseEvent): boolean => event.metaKey || event.ctrlKey || event.shiftKey;
+// Shift-click extends the text selection while editing, so it only means "new tab" on a read-only view.
+const wantsNewTab = (view: EditorView, event: MouseEvent): boolean =>
+  event.metaKey || event.ctrlKey || (!view.editable && event.shiftKey);
 
 export function clickHandler(options: ClickHandlerOptions): Plugin {
   return new Plugin({
@@ -29,11 +32,11 @@ export function clickHandler(options: ClickHandlerOptions): Plugin {
       handleDOMEvents: {
         click: (view, event) => {
           if (event.button !== 0) return false;
+          // A drag-select that starts and ends inside one link also fires a click.
+          if (view.editable && !view.dom.ownerDocument.getSelection()?.isCollapsed) return false;
 
           const anchor = findLinkAnchor(event.target, view.dom);
           if (!anchor) return false;
-          // Anchors inside node views (user mentions, embeds) are their own components, not link marks.
-          if (anchor.closest("[data-node-view-wrapper]")) return false;
 
           const storage = options.editor.storage[CORE_EXTENSIONS.CUSTOM_LINK];
           // A touch long-press opens the edit tooltip and must not also navigate.
@@ -43,10 +46,13 @@ export function clickHandler(options: ClickHandlerOptions): Plugin {
             return true;
           }
 
+          // Anchors that are a node view's own chrome (user mentions, embeds) are not link marks.
+          if (isNodeViewChrome(anchor)) return false;
+
           const href = anchor.getAttribute("href");
           if (!href) return false;
 
-          if (wantsNewTab(event)) {
+          if (wantsNewTab(view, event)) {
             let destination: URL;
             try {
               destination = new URL(href, window.location.href);
@@ -54,7 +60,7 @@ export function clickHandler(options: ClickHandlerOptions): Plugin {
               return false;
             }
             if (destination.protocol !== "http:" && destination.protocol !== "https:") return false;
-            window.open(destination.href, "_blank", "noopener");
+            window.open(destination.href, "_blank", "noopener,noreferrer");
             event.preventDefault();
             return true;
           }
