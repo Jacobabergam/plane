@@ -15,6 +15,7 @@ import { isValidHttpUrl } from "@/helpers/common";
 // local imports
 import { autolink } from "./helpers/autolink";
 import { clickHandler } from "./helpers/clickHandler";
+import { isInternalAppLink, type NavigateInternalLink } from "./helpers/link-navigation";
 import { pasteHandler } from "./helpers/pasteHandler";
 
 type LinkProtocolOptions = {
@@ -54,6 +55,11 @@ type LinkOptions = {
    * @returns - True if the url is valid, false otherwise.
    */
   validate?: (url: string) => boolean;
+  /**
+   * Client-side navigation for relative and same-origin links.
+   * The editor package does not own the app router, so the host app injects this.
+   */
+  navigateInternalLink: NavigateInternalLink | null;
 };
 
 declare module "@tiptap/core" {
@@ -92,6 +98,10 @@ export type CustomLinkStorage = {
   isPreviewOpen: boolean;
   posToInsert: { from: number; to: number };
   isBubbleMenuOpen: boolean;
+  /** Latest router callback. Updated after the editor is created so the click plugin stays current. */
+  navigateInternalLink: NavigateInternalLink | null;
+  /** Set when a touch long-press opens the edit tooltip, so the following click does not navigate. */
+  consumeNextLinkClick: boolean;
 };
 
 export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
@@ -132,6 +142,7 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
         class:
           "text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer",
       },
+      navigateInternalLink: null,
       validate: (url: string) => isValidHttpUrl(url).isValid,
     };
   },
@@ -172,11 +183,29 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const href = HTMLAttributes.href?.toLowerCase() || "";
-    if (href.startsWith("javascript:") || href.startsWith("data:") || href.startsWith("vbscript:")) {
+    const href = String(HTMLAttributes.href ?? "");
+    const lowerHref = href.toLowerCase();
+    if (lowerHref.startsWith("javascript:") || lowerHref.startsWith("data:") || lowerHref.startsWith("vbscript:")) {
       return ["a", mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, href: "" }), 0];
     }
-    return ["a", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+
+    const merged = mergeAttributes(this.options.HTMLAttributes, HTMLAttributes);
+    // Stored marks often keep target=_blank. Decide from the href so existing internal links
+    // stay in the current tab even when the saved attribute says otherwise.
+    if (isInternalAppLink(href)) {
+      const { target: _target, rel: _rel, ...internalAttributes } = merged;
+      return ["a", internalAttributes, 0];
+    }
+
+    return [
+      "a",
+      {
+        ...merged,
+        target: "_blank",
+        rel: "noopener noreferrer nofollow",
+      },
+      0,
+    ];
   },
 
   addCommands() {
@@ -249,6 +278,7 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
       plugins.push(
         clickHandler({
           type: this.type,
+          editor: this.editor,
         })
       );
     }
@@ -270,6 +300,8 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
       isPreviewOpen: false,
       isBubbleMenuOpen: false,
       posToInsert: { from: 0, to: 0 },
+      navigateInternalLink: this.options.navigateInternalLink,
+      consumeNextLinkClick: false,
     };
   },
 });

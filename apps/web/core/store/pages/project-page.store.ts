@@ -14,6 +14,7 @@ import { EUserProjectRoles } from "@plane/types";
 // helpers
 import type { TPageAncestry, TPageTree } from "@plane/utils";
 import {
+  buildDocsNavigationTree,
   buildPageTree,
   calculateTotalFilters,
   filterPagesByPageType,
@@ -57,6 +58,8 @@ export interface IProjectPageStore {
   getCurrentProjectPageIds: (projectId: string) => string[];
   getCurrentProjectFilteredPageIdsByTab: (pageType: TPageNavigationTabs) => string[] | undefined;
   getPageTreeByTab: (pageType: TPageNavigationTabs) => TPageTree;
+  /** Non-archived pages for the docs sidebar. `query` filters titles and keeps the path. */
+  getDocsNavigationTree: (projectId: string, query?: string) => TPageTree;
   getChildPageIds: (pageId: string) => string[];
   getPageAncestry: (pageId: string) => TPageAncestry;
   getPageById: (pageId: string) => TProjectPage | undefined;
@@ -261,6 +264,27 @@ export class ProjectPageStore implements IProjectPageStore {
     );
   });
 
+  /**
+   * @description sidebar tree of non-archived pages in one project
+   */
+  getDocsNavigationTree = computedFn((projectId: string, query = ""): TPageTree => {
+    if (!projectId) return { rootIds: [], childIdsByParent: {} };
+
+    const pages = Object.values(this.data).flatMap((page) => {
+      if (!page.id || page.deleted_at || !page.project_ids?.includes(projectId)) return [];
+      return [
+        {
+          id: page.id,
+          parent: page.parent,
+          name: getPageName(page.name),
+          archivedAt: page.archived_at,
+        },
+      ];
+    });
+
+    return buildDocsNavigationTree(pages, query);
+  });
+
   updateFilters = <T extends keyof TPageFilters>(filterKey: T, filterValue: TPageFilters[T]) => {
     runInAction(() => {
       set(this.filters, [filterKey], filterValue);
@@ -282,9 +306,13 @@ export class ProjectPageStore implements IProjectPageStore {
     try {
       if (!workspaceSlug || !projectId) return undefined;
 
-      const currentPageIds = pageType ? this.getCurrentProjectPageIdsByTab(pageType) : undefined;
+      // A refetch over pages already in the store (sidebar SWR on focus, list remount) must not
+      // flash the init loader, which unmounts the list and drops its expanded state.
+      const hasPages = (
+        pageType ? this.getCurrentProjectPageIdsByTab(pageType) : this.getCurrentProjectPageIds(projectId)
+      )?.length;
       runInAction(() => {
-        this.loader = currentPageIds && currentPageIds.length > 0 ? `mutation-loader` : `init-loader`;
+        this.loader = hasPages ? `mutation-loader` : `init-loader`;
         this.error = undefined;
       });
 

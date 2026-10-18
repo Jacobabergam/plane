@@ -74,7 +74,6 @@ export function PageRenderer(props: Props) {
               <EditorContainer
                 editor={titleEditor}
                 id={id + "-title"}
-                isTouchDevice={isTouchDevice}
                 editorContainerClassName="page-title-editor bg-transparent py-3 border-none"
                 displayConfig={displayConfig}
               >
@@ -92,7 +91,6 @@ export function PageRenderer(props: Props) {
             editor={editor}
             editorContainerClassName={editorContainerClassName}
             id={id}
-            isTouchDevice={isTouchDevice}
             provider={provider}
             state={state}
           >

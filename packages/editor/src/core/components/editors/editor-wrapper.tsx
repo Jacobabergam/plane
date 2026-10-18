@@ -37,6 +37,7 @@ export function EditorWrapper(props: Props) {
     id,
     initialValue,
     isTouchDevice,
+    navigateInternalLink,
     fileHandler,
     flaggedExtensions,
     forwardedRef,
@@ -66,6 +67,7 @@ export function EditorWrapper(props: Props) {
     getEditorMetaData,
     id,
     isTouchDevice,
+    navigateInternalLink,
     initialValue,
     mentionHandler,
     onChange,
@@ -93,7 +95,6 @@ export function EditorWrapper(props: Props) {
       editor={editor}
       editorContainerClassName={editorContainerClassName}
       id={id}
-      isTouchDevice={!!isTouchDevice}
     >
       {children?.(editor)}
       <div className="flex flex-col">

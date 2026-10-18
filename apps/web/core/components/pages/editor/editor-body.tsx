@@ -30,6 +30,7 @@ import { useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
+import { useInternalLinkNavigation } from "@/hooks/use-internal-link-navigation";
 import { usePageFilters } from "@/hooks/use-page-filters";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // plane web imports
@@ -124,6 +125,7 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   });
   // page filters
   const { fontSize, fontStyle, isFullWidth } = usePageFilters();
+  const navigateInternalLink = useInternalLinkNavigation();
   // translation
   const { t } = useTranslation();
   // derived values
@@ -296,6 +298,7 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
             }}
             onAssetChange={updateAssetsList}
             extendedEditorProps={extendedEditorProps}
+            navigateInternalLink={navigateInternalLink}
             isFetchingFallbackBinary={isFetchingFallbackBinary}
           />
           {projectId && (

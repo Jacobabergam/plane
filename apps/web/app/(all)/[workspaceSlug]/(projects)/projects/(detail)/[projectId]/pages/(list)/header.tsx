@@ -18,6 +18,7 @@ import type { TPage } from "@plane/types";
 import { Breadcrumbs, Header } from "@plane/ui";
 // helpers
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
+import { DocsSidebarToggle } from "@/components/pages/navigation/docs-sidebar-toggle";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // plane web imports
@@ -61,20 +62,23 @@ export const PagesListHeader = observer(function PagesListHeader() {
   return (
     <Header>
       <Header.LeftItem>
-        <Breadcrumbs isLoading={loader === "init-loader"}>
-          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
-          <Breadcrumbs.Item
-            component={
-              <BreadcrumbLink
-                label="Pages"
-                href={`/${workspaceSlug}/projects/${currentProjectDetails?.id}/pages/`}
-                icon={<PageIcon className="h-4 w-4 text-tertiary" />}
-                isLast
-              />
-            }
-            isLast
-          />
-        </Breadcrumbs>
+        <div className="flex min-w-0 items-center gap-1">
+          <DocsSidebarToggle />
+          <Breadcrumbs isLoading={loader === "init-loader"}>
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+            <Breadcrumbs.Item
+              component={
+                <BreadcrumbLink
+                  label="Pages"
+                  href={`/${workspaceSlug}/projects/${currentProjectDetails?.id}/pages/`}
+                  icon={<PageIcon className="h-4 w-4 text-tertiary" />}
+                  isLast
+                />
+              }
+              isLast
+            />
+          </Breadcrumbs>
+        </div>
       </Header.LeftItem>
       {canCurrentUserCreatePage && (
         <Header.RightItem>

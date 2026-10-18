@@ -40,6 +40,7 @@ function DocumentEditor(props: IDocumentEditorProps) {
     handleEditorReady,
     id,
     isTouchDevice,
+    navigateInternalLink,
     mentionHandler,
     onChange,
     user,
@@ -83,6 +84,7 @@ function DocumentEditor(props: IDocumentEditorProps) {
     handleEditorReady,
     id,
     initialValue: value,
+    navigateInternalLink,
     mentionHandler,
     onChange,
   });

@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 // types
 import type { TPageNavigationTabs } from "@plane/types";
+import { calculateTotalFilters } from "@plane/utils";
 // components
 import { ListLayout } from "@/components/core/list";
 // plane web hooks
@@ -29,6 +30,8 @@ export const PagesListRoot = observer(function PagesListRoot(props: TPagesListRo
   // derived values
   const tree = getPageTreeByTab(pageType);
   const isSearching = filters.searchQuery.trim().length > 0;
+  // Filters narrow the tree like search does, so a matching child must be revealed under its path.
+  const isNarrowed = isSearching || calculateTotalFilters(filters?.filters ?? {}) !== 0;
   const isFlat = pageType === "archived";
 
   useEffect(() => {
@@ -38,13 +41,13 @@ export const PagesListRoot = observer(function PagesListRoot(props: TPagesListRo
   const isExpanded = (pageId: string) => {
     const manual = expandedMap[pageId];
     if (manual !== undefined) return manual;
-    // Search should reveal the match under its path without an extra click.
-    return isSearching;
+    // Search and filters should reveal the match under its path without an extra click.
+    return isNarrowed;
   };
 
   const onToggle = (pageId: string) => {
     setExpandedMap((previous) => {
-      const currently = previous[pageId] !== undefined ? previous[pageId] : isSearching;
+      const currently = previous[pageId] !== undefined ? previous[pageId] : isNarrowed;
       return { ...previous, [pageId]: !currently };
     });
   };
