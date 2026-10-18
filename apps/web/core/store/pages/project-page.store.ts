@@ -306,9 +306,13 @@ export class ProjectPageStore implements IProjectPageStore {
     try {
       if (!workspaceSlug || !projectId) return undefined;
 
-      const currentPageIds = pageType ? this.getCurrentProjectPageIdsByTab(pageType) : undefined;
+      // A refetch over pages already in the store (sidebar SWR on focus, list remount) must not
+      // flash the init loader, which unmounts the list and drops its expanded state.
+      const hasPages = (
+        pageType ? this.getCurrentProjectPageIdsByTab(pageType) : this.getCurrentProjectPageIds(projectId)
+      )?.length;
       runInAction(() => {
-        this.loader = currentPageIds && currentPageIds.length > 0 ? `mutation-loader` : `init-loader`;
+        this.loader = hasPages ? `mutation-loader` : `init-loader`;
         this.error = undefined;
       });
 

@@ -424,12 +424,43 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
           this.archived_at = response.archived_at;
         });
       }
+
+      // The API archives the whole subtree. Mirror that so children leave the tree with their parent.
+      const archivedAt = this.archived_at;
+      runInAction(() => {
+        for (const page of this.getDescendantPages()) {
+          page.archived_at = archivedAt;
+          if (page.id && this.rootStore.favorite.entityMap[page.id]) {
+            this.rootStore.favorite.removeFavoriteFromStore(page.id);
+          }
+        }
+      });
     } catch (error) {
       console.error(error);
       runInAction(() => {
         this.archived_at = null;
       });
     }
+  };
+
+  /**
+   * @description every page below this one in the store, archived ones included
+   */
+  private getDescendantPages = (): TBasePage[] => {
+    const pages = Object.values(this.rootStore.projectPages.data ?? {});
+    const descendants: TBasePage[] = [];
+    const queue: (string | undefined)[] = [this.id];
+    while (queue.length > 0) {
+      const parentId = queue.shift();
+      if (!parentId) continue;
+      for (const page of pages) {
+        if (page.parent === parentId && page.id && !descendants.includes(page)) {
+          descendants.push(page);
+          queue.push(page.id);
+        }
+      }
+    }
+    return descendants;
   };
 
   /**
@@ -446,6 +477,15 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       if (shouldSync) {
         await this.services.restore();
       }
+
+      // The API restores the subtree and detaches the page when its parent stays archived.
+      runInAction(() => {
+        for (const page of this.getDescendantPages()) {
+          page.archived_at = null;
+        }
+        const parentPage = this.parent ? this.rootStore.projectPages.getPageById(this.parent) : undefined;
+        if (parentPage?.archived_at) this.parent = null;
+      });
     } catch (error) {
       console.error(error);
       runInAction(() => {

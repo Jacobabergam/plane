@@ -18,6 +18,16 @@ describe("isInternalAppLink", () => {
     assert.equal(isInternalAppLink("#section", BASE), true);
     assert.equal(isInternalAppLink("https://plane.example/bergam-home/projects/p1/pages/page-2", BASE), true);
     assert.equal(isInternalAppLink("//plane.example/bergam-home/projects/p1/pages/page-2", BASE), true);
+    assert.equal(isInternalAppLink("/bergam-home/projects/p/pages/q", BASE), true);
+  });
+
+  it("treats same-origin paths served outside the app router as external", () => {
+    assert.equal(isInternalAppLink("/api/assets/x", BASE), false);
+    assert.equal(isInternalAppLink("https://plane.example/api/assets/x", BASE), false);
+    assert.equal(isInternalAppLink("/god-mode/", BASE), false);
+    assert.equal(isInternalAppLink("/spaces/issues/abc", BASE), false);
+    assert.equal(isInternalAppLink("/live/collaboration", BASE), false);
+    assert.equal(isInternalAppLink("/uploads/file.png", BASE), false);
   });
 
   it("treats a different origin and non-http protocols as external", () => {

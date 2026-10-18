@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { PanelLeft } from "lucide-react";
+import { ListTree } from "lucide-react";
 // plane imports
 import { IconButton } from "@plane/propel/icon-button";
 // local imports
@@ -21,7 +21,7 @@ export function DocsSidebarToggle() {
     <IconButton
       size="base"
       variant="ghost"
-      icon={PanelLeft}
+      icon={ListTree}
       aria-pressed={isOpen}
       aria-label={isOpen ? "Hide pages sidebar" : "Show pages sidebar"}
       onClick={() => {

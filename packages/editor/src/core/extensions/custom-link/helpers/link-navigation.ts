@@ -5,6 +5,11 @@
  */
 
 const NON_NAVIGABLE_PROTOCOLS = ["javascript:", "data:", "vbscript:", "mailto:", "tel:", "file:", "about:"];
+/** Same-origin paths served by other processes, not the app router. */
+const NON_APP_PATH_PREFIXES = ["/api/", "/god-mode/", "/spaces/", "/live/", "/uploads/"];
+
+const isNonAppPath = (pathname: string): boolean =>
+  NON_APP_PATH_PREFIXES.some((prefix) => pathname === prefix.slice(0, -1) || pathname.startsWith(prefix));
 
 export type NavigateInternalLink = (path: string) => void;
 
@@ -28,12 +33,13 @@ export const isInternalAppLink = (href: string, baseHref?: string): boolean => {
   if (!trimmed || hasBlockedProtocol(trimmed)) return false;
 
   const base = resolveBaseHref(baseHref);
-  if (!base) return trimmed.startsWith("/") && !trimmed.startsWith("//");
+  if (!base) return trimmed.startsWith("/") && !trimmed.startsWith("//") && !isNonAppPath(trimmed);
 
   try {
     const url = new URL(trimmed, base);
     if (url.protocol !== "http:" && url.protocol !== "https:") return false;
-    return url.origin === new URL(base).origin;
+    if (url.origin !== new URL(base).origin) return false;
+    return !isNonAppPath(url.pathname);
   } catch {
     return false;
   }
