@@ -44,6 +44,7 @@ import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageContentLoader } from "../loaders/page-content-loader";
 import { PageEditorHeaderRoot } from "./header";
+import { PageSubPages } from "./sub-pages";
 import { PageContentBrowser } from "./summary";
 
 export type TEditorBodyConfig = {
@@ -272,7 +273,7 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
             handleEditorReady={handleEditorReady}
             ref={editorForwardRef}
             titleRef={titleEditorRef}
-            containerClassName="h-full p-0 pb-64"
+            containerClassName="h-full p-0 pb-8"
             displayConfig={displayConfig}
             getEditorMetaData={getEditorMetaData}
             mentionHandler={{
@@ -297,6 +298,11 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
             extendedEditorProps={extendedEditorProps}
             isFetchingFallbackBinary={isFetchingFallbackBinary}
           />
+          {projectId && (
+            <div className={cn(blockWidthClassName, "pb-64")}>
+              <PageSubPages page={page} projectId={projectId} storeType={storeType} workspaceSlug={workspaceSlug} />
+            </div>
+          )}
         </div>
       </div>
     </Row>

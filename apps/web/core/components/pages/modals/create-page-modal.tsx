@@ -23,6 +23,8 @@ type Props = {
   projectId: string;
   isModalOpen: boolean;
   pageAccess?: EPageAccess;
+  /** When set, the new page is created as a child of this page. */
+  parentId?: string;
   handleModalClose: () => void;
   redirectionEnabled?: boolean;
   storeType: EPageStoreType;
@@ -35,6 +37,7 @@ export function CreatePageModal(props: Props) {
     isModalOpen,
     pageAccess,
     handleModalClose,
+    parentId,
     redirectionEnabled = false,
     storeType,
   } = props;
@@ -43,6 +46,7 @@ export function CreatePageModal(props: Props) {
     id: undefined,
     name: "",
     logo_props: undefined,
+    ...(parentId ? { parent: parentId } : {}),
   });
   // router
   const router = useAppRouter();
@@ -53,11 +57,20 @@ export function CreatePageModal(props: Props) {
 
   // update page access in form data when page access from the store changes
   useEffect(() => {
-    setPageFormData((prev) => ({ ...prev, access: pageAccess }));
-  }, [pageAccess]);
+    setPageFormData((prev) => ({
+      ...prev,
+      access: pageAccess,
+      ...(parentId ? { parent: parentId } : { parent: undefined }),
+    }));
+  }, [pageAccess, parentId]);
 
   const handleStateClear = () => {
-    setPageFormData({ id: undefined, name: "", access: pageAccess });
+    setPageFormData({
+      id: undefined,
+      name: "",
+      access: pageAccess,
+      ...(parentId ? { parent: parentId } : {}),
+    });
     handleModalClose();
   };
 

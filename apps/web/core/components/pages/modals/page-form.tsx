@@ -64,11 +64,12 @@ export function PageForm(props: Props) {
   };
 
   const isTitleLengthMoreThan255Character = formData.name ? formData.name.length > 255 : false;
+  const submitLabel = formData.parent ? "Create sub-page" : "Create Page";
 
   return (
     <form onSubmit={handlePageFormSubmit}>
       <div className="space-y-5 p-5">
-        <h3 className="text-18 font-medium text-secondary">Create page</h3>
+        <h3 className="text-18 font-medium text-secondary">{formData.parent ? "Create sub-page" : "Create page"}</h3>
         <div className="flex h-9 w-full items-start gap-2">
           <EmojiPicker
             isOpen={isOpen}
@@ -155,7 +156,7 @@ export function PageForm(props: Props) {
             disabled={isTitleLengthMoreThan255Character}
             tabIndex={getIndex("submit")}
           >
-            {isSubmitting ? "Creating" : "Create Page"}
+            {isSubmitting ? "Creating" : submitLabel}
           </Button>
         </div>
       </div>

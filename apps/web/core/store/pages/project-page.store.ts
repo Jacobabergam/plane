@@ -12,7 +12,16 @@ import { EUserPermissions } from "@plane/constants";
 import type { TPage, TPageFilters, TPageNavigationTabs } from "@plane/types";
 import { EUserProjectRoles } from "@plane/types";
 // helpers
-import { filterPagesByPageType, getPageName, orderPages, shouldFilterPage } from "@plane/utils";
+import type { TPageAncestry, TPageTree } from "@plane/utils";
+import {
+  buildPageTree,
+  calculateTotalFilters,
+  filterPagesByPageType,
+  getPageName,
+  orderPages,
+  shouldFilterPage,
+  walkPageAncestors,
+} from "@plane/utils";
 // plane web constants
 // plane web store
 import type { RootStore } from "@/plane-web/store/root.store";
@@ -47,6 +56,9 @@ export interface IProjectPageStore {
   getCurrentProjectPageIdsByTab: (pageType: TPageNavigationTabs) => string[] | undefined;
   getCurrentProjectPageIds: (projectId: string) => string[];
   getCurrentProjectFilteredPageIdsByTab: (pageType: TPageNavigationTabs) => string[] | undefined;
+  getPageTreeByTab: (pageType: TPageNavigationTabs) => TPageTree;
+  getChildPageIds: (pageId: string) => string[];
+  getPageAncestry: (pageId: string) => TPageAncestry;
   getPageById: (pageId: string) => TProjectPage | undefined;
   updateFilters: <T extends keyof TPageFilters>(filterKey: T, filterValue: TPageFilters[T]) => void;
   clearAllFilters: () => void;
@@ -60,7 +72,7 @@ export interface IProjectPageStore {
     workspaceSlug: string,
     projectId: string,
     pageId: string,
-    options?: { trackVisit?: boolean }
+    options?: { trackVisit?: boolean; silent?: boolean }
   ) => Promise<TPage | undefined>;
   createPage: (pageData: Partial<TPage>) => Promise<TPage | undefined>;
   removePage: (params: { pageId: string; shouldSync?: boolean }) => Promise<void>;
@@ -189,6 +201,66 @@ export class ProjectPageStore implements IProjectPageStore {
    */
   getPageById = computedFn((pageId: string) => this.data?.[pageId] || undefined);
 
+  /**
+   * @description ancestor chain for a page, root first. `missingParentId` is the next page to fetch.
+   */
+  getPageAncestry = computedFn((pageId: string): TPageAncestry => {
+    const page = this.getPageById(pageId);
+    return walkPageAncestors(page?.parent, (id) => {
+      const stored = this.getPageById(id);
+      if (!stored) return undefined;
+      return { parent: stored.parent };
+    });
+  });
+
+  /**
+   * @description direct, non-archived children of a page in the current project
+   */
+  getChildPageIds = computedFn((pageId: string) => {
+    const { projectId } = this.store.router;
+    const children = Object.values(this.data).filter(
+      (page) =>
+        !!page.id &&
+        page.parent === pageId &&
+        !page.archived_at &&
+        !page.deleted_at &&
+        (!projectId || page.project_ids?.includes(projectId))
+    );
+    return orderPages(children, this.filters.sortKey, this.filters.sortBy)
+      .map((page) => page.id)
+      .filter((id): id is string => !!id);
+  });
+
+  /**
+   * @description tree for the pages list. Archived is flat. Search keeps a match under its ancestors.
+   */
+  getPageTreeByTab = computedFn((pageType: TPageNavigationTabs): TPageTree => {
+    const { projectId } = this.store.router;
+    if (!projectId) return { rootIds: [], childIdsByParent: {} };
+
+    const pagesByType = filterPagesByPageType(pageType, Object.values(this.data || {}));
+    const projectPages = pagesByType.filter((page) => page.id && page.project_ids?.includes(projectId));
+    const orderedPages = orderPages(projectPages, this.filters.sortKey, this.filters.sortBy);
+    const search = this.filters.searchQuery.trim().toLowerCase();
+    const isNarrowed = search.length > 0 || calculateTotalFilters(this.filters.filters ?? {}) !== 0;
+    const matchIds = isNarrowed
+      ? new Set(
+          orderedPages
+            .filter(
+              (page) =>
+                getPageName(page.name).toLowerCase().includes(search) && shouldFilterPage(page, this.filters.filters)
+            )
+            .map((page) => page.id)
+            .filter((id): id is string => !!id)
+        )
+      : null;
+
+    return buildPageTree(
+      orderedPages.flatMap((page) => (page.id ? [{ id: page.id, parent: page.parent }] : [])),
+      { matchIds, flat: pageType === "archived" }
+    );
+  });
+
   updateFilters = <T extends keyof TPageFilters>(filterKey: T, filterValue: TPageFilters[T]) => {
     runInAction(() => {
       set(this.filters, [filterKey], filterValue);
@@ -254,15 +326,17 @@ export class ProjectPageStore implements IProjectPageStore {
    */
   fetchPageDetails = async (...args: Parameters<IProjectPageStore["fetchPageDetails"]>) => {
     const [workspaceSlug, projectId, pageId, options] = args;
-    const { trackVisit } = options || {};
+    const { trackVisit, silent } = options || {};
     try {
       if (!workspaceSlug || !projectId || !pageId) return undefined;
 
       const currentPageId = this.getPageById(pageId);
-      runInAction(() => {
-        this.loader = currentPageId ? `mutation-loader` : `init-loader`;
-        this.error = undefined;
-      });
+      if (!silent) {
+        runInAction(() => {
+          this.loader = currentPageId ? `mutation-loader` : `init-loader`;
+          this.error = undefined;
+        });
+      }
 
       const page = await this.service.fetchById(workspaceSlug, projectId, pageId, trackVisit ?? true);
 
@@ -275,18 +349,20 @@ export class ProjectPageStore implements IProjectPageStore {
             set(this.data, [page.id], new ProjectPage(this.store, page));
           }
         }
-        this.loader = undefined;
+        if (!silent) this.loader = undefined;
       });
 
       return page;
     } catch (error) {
-      runInAction(() => {
-        this.loader = undefined;
-        this.error = {
-          title: "Failed",
-          description: "Failed to fetch the page, Please try again later.",
-        };
-      });
+      if (!silent) {
+        runInAction(() => {
+          this.loader = undefined;
+          this.error = {
+            title: "Failed",
+            description: "Failed to fetch the page, Please try again later.",
+          };
+        });
+      }
       throw error;
     }
   };
@@ -335,6 +411,10 @@ export class ProjectPageStore implements IProjectPageStore {
 
       await this.service.remove(workspaceSlug, projectId, pageId);
       runInAction(() => {
+        // The API detaches children when a parent is deleted. Mirror that so they become top-level rows.
+        for (const page of Object.values(this.data)) {
+          if (page.parent === pageId) page.parent = null;
+        }
         unset(this.data, [pageId]);
         if (this.rootStore.favorite.entityMap[pageId]) this.rootStore.favorite.removeFavoriteFromStore(pageId);
       });

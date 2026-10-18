@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 // types
 import type { TPageNavigationTabs } from "@plane/types";
@@ -13,7 +14,7 @@ import { ListLayout } from "@/components/core/list";
 import type { EPageStoreType } from "@/plane-web/hooks/store";
 import { usePageStore } from "@/plane-web/hooks/store";
 // local imports
-import { PageListBlock } from "./block";
+import { PageListTreeItem } from "./tree-item";
 
 type TPagesListRoot = {
   pageType: TPageNavigationTabs;
@@ -23,15 +24,46 @@ type TPagesListRoot = {
 export const PagesListRoot = observer(function PagesListRoot(props: TPagesListRoot) {
   const { pageType, storeType } = props;
   // store hooks
-  const { getCurrentProjectFilteredPageIdsByTab } = usePageStore(storeType);
+  const { filters, getPageTreeByTab } = usePageStore(storeType);
+  const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   // derived values
-  const filteredPageIds = getCurrentProjectFilteredPageIdsByTab(pageType);
+  const tree = getPageTreeByTab(pageType);
+  const isSearching = filters.searchQuery.trim().length > 0;
+  const isFlat = pageType === "archived";
 
-  if (!filteredPageIds) return <></>;
+  useEffect(() => {
+    setExpandedMap({});
+  }, [pageType]);
+
+  const isExpanded = (pageId: string) => {
+    const manual = expandedMap[pageId];
+    if (manual !== undefined) return manual;
+    // Search should reveal the match under its path without an extra click.
+    return isSearching;
+  };
+
+  const onToggle = (pageId: string) => {
+    setExpandedMap((previous) => {
+      const currently = previous[pageId] !== undefined ? previous[pageId] : isSearching;
+      return { ...previous, [pageId]: !currently };
+    });
+  };
+
+  if (tree.rootIds.length === 0) return <></>;
+
   return (
     <ListLayout>
-      {filteredPageIds.map((pageId) => (
-        <PageListBlock key={pageId} pageId={pageId} storeType={storeType} />
+      {tree.rootIds.map((pageId) => (
+        <PageListTreeItem
+          key={pageId}
+          childIdsByParent={tree.childIdsByParent}
+          depth={0}
+          flat={isFlat}
+          isExpanded={isExpanded}
+          onToggle={onToggle}
+          pageId={pageId}
+          storeType={storeType}
+        />
       ))}
     </ListLayout>
   );

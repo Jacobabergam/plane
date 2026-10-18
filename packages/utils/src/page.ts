@@ -96,3 +96,13 @@ export const getPageName = (name: string | undefined) => {
   if (!name || name.trim() === "") return "Untitled";
   return name;
 };
+
+export {
+  buildPageTree,
+  collapseBreadcrumbMiddle,
+  walkPageAncestors,
+  type TBreadcrumbSegment,
+  type TPageAncestry,
+  type TPageTree,
+  type TPageTreeSource,
+} from "./page-tree";
