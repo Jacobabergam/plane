@@ -4,20 +4,16 @@
  * See the LICENSE file for details.
  */
 
-// components
 import { Outlet } from "react-router";
-import { AppHeader } from "@/components/core/app-header";
-import { ContentWrapper } from "@/components/core/content-wrapper";
+// components
+import { PagesSectionFrame } from "@/components/pages/navigation/pages-section-frame";
 // local components
 import { PagesListHeader } from "./header";
 
 export default function ProjectPagesListLayout() {
   return (
-    <>
-      <AppHeader header={<PagesListHeader />} />
-      <ContentWrapper>
-        <Outlet />
-      </ContentWrapper>
-    </>
+    <PagesSectionFrame header={<PagesListHeader />}>
+      <Outlet />
+    </PagesSectionFrame>
   );
 }

@@ -15,6 +15,7 @@ import { BreadcrumbItemLoader, Breadcrumbs, Header, BreadcrumbNavigationSearchDr
 import { collapseBreadcrumbMiddle, getPageName } from "@plane/utils";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
+import { DocsSidebarToggle } from "@/components/pages/navigation/docs-sidebar-toggle";
 import { PageAccessIcon } from "@/components/common/page-access-icon";
 import { SwitcherIcon, SwitcherLabel } from "@/components/common/switcher-label";
 import { PageHeaderActions } from "@/components/pages/header/actions";
@@ -105,80 +106,83 @@ export const PageDetailsHeader = observer(function PageDetailsHeader() {
   return (
     <Header>
       <Header.LeftItem>
-        <div>
-          <Breadcrumbs isLoading={loader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
-            <Breadcrumbs.Item
-              component={
-                <BreadcrumbLink
-                  label="Pages"
-                  href={`/${workspaceSlug}/projects/${projectId}/pages/`}
-                  icon={<PageIcon className="h-4 w-4 text-tertiary" />}
-                />
-              }
-            />
-            {ancestorSegments.map((segment) => {
-              switch (segment.kind) {
-                case "item":
-                  return (
-                    <Breadcrumbs.Item
-                      key={segment.item.id}
-                      component={
-                        <BreadcrumbLink
-                          label={getPageName(segment.item.name)}
-                          href={`/${workspaceSlug}/projects/${projectId}/pages/${segment.item.id}`}
-                          icon={<PageLogo logo={segment.item.logo_props} size={16} />}
-                        />
-                      }
-                    />
-                  );
-                case "ellipsis": {
-                  const hiddenLabel = segment.hidden.map((hiddenPage) => getPageName(hiddenPage.name)).join(" / ");
-                  return (
-                    <Breadcrumbs.Item
-                      key="collapsed-ancestors"
-                      component={
-                        <Tooltip tooltipContent={hiddenLabel} position="bottom">
-                          <button
-                            type="button"
-                            aria-label={`Show ${segment.hidden.length} hidden pages`}
-                            className="rounded-sm px-1.5 py-1 text-13 font-medium text-tertiary hover:bg-layer-transparent-hover hover:text-primary"
-                            onClick={() => setIsChainExpanded(true)}
-                          >
-                            …
-                          </button>
-                        </Tooltip>
-                      }
-                    />
-                  );
+        <div className="flex min-w-0 items-center gap-1">
+          <DocsSidebarToggle />
+          <div className="min-w-0">
+            <Breadcrumbs isLoading={loader === "init-loader"}>
+              <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+              <Breadcrumbs.Item
+                component={
+                  <BreadcrumbLink
+                    label="Pages"
+                    href={`/${workspaceSlug}/projects/${projectId}/pages/`}
+                    icon={<PageIcon className="h-4 w-4 text-tertiary" />}
+                  />
                 }
-                default: {
-                  const _exhaustive: never = segment;
-                  return _exhaustive;
-                }
-              }
-            })}
-            {isLoadingAncestor && <Breadcrumbs.Item component={<BreadcrumbItemLoader />} />}
-
-            <Breadcrumbs.Item
-              component={
-                <BreadcrumbNavigationSearchDropdown
-                  selectedItem={pageId?.toString() ?? ""}
-                  navigationItems={switcherOptions}
-                  onChange={(value: string) => {
-                    router.push(`/${workspaceSlug}/projects/${projectId}/pages/${value}`);
-                  }}
-                  title={getPageName(page?.name)}
-                  icon={
-                    <Breadcrumbs.Icon>
-                      <SwitcherIcon logo_props={page.logo_props} LabelIcon={PageIcon} size={16} />
-                    </Breadcrumbs.Icon>
+              />
+              {ancestorSegments.map((segment) => {
+                switch (segment.kind) {
+                  case "item":
+                    return (
+                      <Breadcrumbs.Item
+                        key={segment.item.id}
+                        component={
+                          <BreadcrumbLink
+                            label={getPageName(segment.item.name)}
+                            href={`/${workspaceSlug}/projects/${projectId}/pages/${segment.item.id}`}
+                            icon={<PageLogo logo={segment.item.logo_props} size={16} />}
+                          />
+                        }
+                      />
+                    );
+                  case "ellipsis": {
+                    const hiddenLabel = segment.hidden.map((hiddenPage) => getPageName(hiddenPage.name)).join(" / ");
+                    return (
+                      <Breadcrumbs.Item
+                        key="collapsed-ancestors"
+                        component={
+                          <Tooltip tooltipContent={hiddenLabel} position="bottom">
+                            <button
+                              type="button"
+                              aria-label={`Show ${segment.hidden.length} hidden pages`}
+                              className="rounded-sm px-1.5 py-1 text-13 font-medium text-tertiary hover:bg-layer-transparent-hover hover:text-primary"
+                              onClick={() => setIsChainExpanded(true)}
+                            >
+                              …
+                            </button>
+                          </Tooltip>
+                        }
+                      />
+                    );
                   }
-                  isLast
-                />
-              }
-            />
-          </Breadcrumbs>
+                  default: {
+                    const _exhaustive: never = segment;
+                    return _exhaustive;
+                  }
+                }
+              })}
+              {isLoadingAncestor && <Breadcrumbs.Item component={<BreadcrumbItemLoader />} />}
+
+              <Breadcrumbs.Item
+                component={
+                  <BreadcrumbNavigationSearchDropdown
+                    selectedItem={pageId?.toString() ?? ""}
+                    navigationItems={switcherOptions}
+                    onChange={(value: string) => {
+                      router.push(`/${workspaceSlug}/projects/${projectId}/pages/${value}`);
+                    }}
+                    title={getPageName(page?.name)}
+                    icon={
+                      <Breadcrumbs.Icon>
+                        <SwitcherIcon logo_props={page.logo_props} LabelIcon={PageIcon} size={16} />
+                      </Breadcrumbs.Icon>
+                    }
+                    isLast
+                  />
+                }
+              />
+            </Breadcrumbs>
+          </div>
         </div>
       </Header.LeftItem>
       <Header.RightItem>

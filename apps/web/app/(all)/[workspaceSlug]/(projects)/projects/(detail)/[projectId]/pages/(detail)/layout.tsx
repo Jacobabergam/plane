@@ -7,8 +7,7 @@
 // component
 import { Outlet } from "react-router";
 import useSWR from "swr";
-import { AppHeader } from "@/components/core/app-header";
-import { ContentWrapper } from "@/components/core/content-wrapper";
+import { PagesSectionFrame } from "@/components/pages/navigation/pages-section-frame";
 // plane web hooks
 import { EPageStoreType, usePageStore } from "@/plane-web/hooks/store";
 // local components
@@ -21,11 +20,8 @@ export default function ProjectPageDetailsLayout({ params }: Route.ComponentProp
   // fetching pages list
   useSWR(`PROJECT_PAGES_${projectId}`, () => fetchPagesList(workspaceSlug, projectId));
   return (
-    <>
-      <AppHeader header={<PageDetailsHeader />} />
-      <ContentWrapper>
-        <Outlet />
-      </ContentWrapper>
-    </>
+    <PagesSectionFrame header={<PageDetailsHeader />}>
+      <Outlet />
+    </PagesSectionFrame>
   );
 }

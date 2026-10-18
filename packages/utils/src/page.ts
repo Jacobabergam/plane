@@ -106,3 +106,4 @@ export {
   type TPageTree,
   type TPageTreeSource,
 } from "./page-tree";
+export { buildDocsNavigationTree, mergeExpandedPageIds, parentIdsInTree, type TDocsNavSource } from "./page-nav";
