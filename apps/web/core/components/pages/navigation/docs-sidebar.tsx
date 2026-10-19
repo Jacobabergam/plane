@@ -104,7 +104,8 @@ export const DocsSidebar = observer(function DocsSidebar() {
 
   const tree = projectIdString ? getDocsNavigationTree(projectIdString, query) : { rootIds: [], childIdsByParent: {} };
   // Unfiltered tree for cycle checks: a search hides descendants that a drop must still respect.
-  const fullTree = projectIdString ? getDocsNavigationTree(projectIdString) : tree;
+  // computedFn memoizes per argument list and throws if the arity changes, so always pass the query.
+  const fullTree = projectIdString ? getDocsNavigationTree(projectIdString, "") : tree;
   const searching = query.trim().length > 0;
   const isPanelVisible = !!sidebar && (sidebar.isMobileOpen || (!sidebar.isMobile && sidebar.isDesktopOpen));
   const isDndEnabled = !!sidebar && !sidebar.isMobile && !sidebar.isMobileOpen && !isCoarsePointer;
