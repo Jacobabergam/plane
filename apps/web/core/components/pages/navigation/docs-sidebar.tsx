@@ -16,6 +16,9 @@ import { CloseIcon, PlusIcon, SearchIcon } from "@plane/propel/icons";
 import { cn, mergeExpandedPageIds } from "@plane/utils";
 // components
 import { CreatePageModal } from "@/components/pages/modals/create-page-modal";
+import { PageQuickView } from "@/components/pages/quick-view";
+// hooks
+import { usePageLinkQuickView } from "@/hooks/use-page-link-quick-view";
 // plane web hooks
 import { EPageStoreType, usePageStore } from "@/plane-web/hooks/store";
 // local imports
@@ -64,6 +67,7 @@ export const DocsSidebar = observer(function DocsSidebar() {
   persistedRef.current = storedExpanded ?? [];
   const setMobileOpenRef = useRef(sidebar?.setMobileOpen);
   setMobileOpenRef.current = sidebar?.setMobileOpen;
+  const pageLinkQuickView = usePageLinkQuickView({ workspaceSlug: workspaceSlugString, openDelay: 600 });
 
   useSWR(workspaceSlugString && projectIdString ? `PROJECT_PAGES_${projectIdString}` : null, () =>
     fetchPagesList(workspaceSlugString, projectIdString)
@@ -211,7 +215,10 @@ export const DocsSidebar = observer(function DocsSidebar() {
               />
             </label>
           </div>
-          <div className="vertical-scrollbar scrollbar-sm flex-1 overflow-y-auto px-1.5 pb-4">
+          <div
+            ref={pageLinkQuickView.containerRef}
+            className="vertical-scrollbar scrollbar-sm flex-1 overflow-y-auto px-1.5 pb-4"
+          >
             {isLoading && <DocsSidebarSkeleton />}
             {!isLoading && error && tree.rootIds.length === 0 && (
               <p className="px-2 py-3 text-13 text-tertiary">{error.description}</p>
@@ -237,6 +244,7 @@ export const DocsSidebar = observer(function DocsSidebar() {
                 />
               ))}
           </div>
+          <PageQuickView controller={pageLinkQuickView} />
           {!isMobile && (
             <div
               role="separator"
