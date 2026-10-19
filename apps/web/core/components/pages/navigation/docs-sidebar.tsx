@@ -199,8 +199,8 @@ export const DocsSidebar = observer(function DocsSidebar() {
     if (!page || page.archived_at || getDropValidity(draggedId, parentId) !== "valid") return;
     if (parentId) expandPage(parentId);
     revealPageIdRef.current = draggedId;
-    // `update` sets `parent` in the store first and puts the old value back if the request fails.
-    page.update({ parent: parentId }).catch(() => {
+    // `updateParent` sets `parent` in the store first, guards against cycles, and puts the old value back on failure.
+    page.updateParent(parentId).catch(() => {
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Couldn't move the page",
