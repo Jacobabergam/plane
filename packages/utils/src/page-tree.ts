@@ -129,6 +129,47 @@ export const buildPageTree = (
 };
 
 /**
+ * Every page below `pageId`, at any depth. A cycle in the data is tolerated.
+ */
+export const collectPageDescendantIds = (pageId: string, pages: readonly TPageTreeSource[]): Set<string> => {
+  const childIdsByParent = new Map<string, string[]>();
+  for (const page of pages) {
+    const parentId = normalizeParentId(page.parent);
+    if (!parentId) continue;
+    const siblings = childIdsByParent.get(parentId) ?? [];
+    siblings.push(page.id);
+    childIdsByParent.set(parentId, siblings);
+  }
+
+  const descendants = new Set<string>();
+  const queue: string[] = [pageId];
+  while (queue.length > 0) {
+    const current = queue.shift() as string;
+    for (const childId of childIdsByParent.get(current) ?? []) {
+      if (childId === pageId || descendants.has(childId)) continue;
+      descendants.add(childId);
+      queue.push(childId);
+    }
+  }
+  return descendants;
+};
+
+/**
+ * Whether `pageId` may be moved under `parentId` (Move to…).
+ * `null` is the top level and always allowed. A page cannot go under itself or one of its descendants.
+ */
+export const isAllowedPageParent = (
+  pageId: string,
+  parentId: string | null | undefined,
+  pages: readonly TPageTreeSource[]
+): boolean => {
+  const target = normalizeParentId(parentId);
+  if (!target) return true;
+  if (target === pageId) return false;
+  return !collectPageDescendantIds(pageId, pages).has(target);
+};
+
+/**
  * Collapse the middle of a long breadcrumb.
  * `maxVisible` includes the first item and the tail; everything between becomes one ellipsis.
  */

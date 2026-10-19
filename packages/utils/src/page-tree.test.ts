@@ -6,7 +6,13 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildPageTree, collapseBreadcrumbMiddle, walkPageAncestors } from "./page-tree.ts";
+import {
+  buildPageTree,
+  collapseBreadcrumbMiddle,
+  collectPageDescendantIds,
+  isAllowedPageParent,
+  walkPageAncestors,
+} from "./page-tree.ts";
 
 describe("walkPageAncestors", () => {
   const pages = new Map<string, { parent?: string | null }>([
@@ -96,5 +102,52 @@ describe("collapseBreadcrumbMiddle", () => {
       { kind: "item", item: "d" },
       { kind: "item", item: "e" },
     ]);
+  });
+});
+
+describe("collectPageDescendantIds", () => {
+  const pages = [
+    { id: "root", parent: null },
+    { id: "child", parent: "root" },
+    { id: "grand", parent: "child" },
+    { id: "sibling", parent: "root" },
+    { id: "other", parent: null },
+  ];
+
+  it("returns every page below the given one, at any depth", () => {
+    const descendants = collectPageDescendantIds("root", pages);
+    assert.deepEqual([...descendants].toSorted(), ["child", "grand", "sibling"]);
+    assert.deepEqual([...collectPageDescendantIds("child", pages)], ["grand"]);
+    assert.equal(collectPageDescendantIds("other", pages).size, 0);
+  });
+
+  it("terminates when the data already cycles", () => {
+    const cycled = [
+      { id: "a", parent: "b" },
+      { id: "b", parent: "a" },
+    ];
+    assert.deepEqual([...collectPageDescendantIds("a", cycled)], ["b"]);
+  });
+});
+
+describe("isAllowedPageParent", () => {
+  const pages = [
+    { id: "root", parent: null },
+    { id: "child", parent: "root" },
+    { id: "grand", parent: "child" },
+    { id: "other", parent: null },
+  ];
+
+  it("allows the top level, a sibling tree and an ancestor", () => {
+    assert.equal(isAllowedPageParent("child", null, pages), true);
+    assert.equal(isAllowedPageParent("child", undefined, pages), true);
+    assert.equal(isAllowedPageParent("child", "other", pages), true);
+    assert.equal(isAllowedPageParent("grand", "root", pages), true);
+  });
+
+  it("refuses the page itself and its descendants", () => {
+    assert.equal(isAllowedPageParent("root", "root", pages), false);
+    assert.equal(isAllowedPageParent("root", "child", pages), false);
+    assert.equal(isAllowedPageParent("root", "grand", pages), false);
   });
 });

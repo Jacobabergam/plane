@@ -7,7 +7,7 @@
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
-import { ArchiveRestoreIcon, FileOutput, LockKeyhole, LockKeyholeOpen } from "lucide-react";
+import { ArchiveRestoreIcon, FileOutput, FolderInput, LockKeyhole, LockKeyholeOpen } from "lucide-react";
 // constants
 import { EPageAccess } from "@plane/constants";
 // plane editor
@@ -18,6 +18,7 @@ import { ContextMenu, CustomMenu } from "@plane/ui";
 // components
 import { cn } from "@plane/utils";
 import { DeletePageModal } from "@/components/pages/modals/delete-page-modal";
+import { MovePageToParentModal } from "@/components/pages/modals/move-page-to-parent-modal";
 // hooks
 import { usePageOperations } from "@/hooks/use-page-operations";
 // plane web components
@@ -41,7 +42,8 @@ export type TPageActions =
   | "delete"
   | "version-history"
   | "export"
-  | "move";
+  | "move"
+  | "move-to-parent";
 
 type Props = {
   extraOptions?: (TContextMenuItem & { key: TPageActions })[];
@@ -56,6 +58,7 @@ export const PageActions = observer(function PageActions(props: Props) {
   // states
   const [deletePageModal, setDeletePageModal] = useState(false);
   const [movePageModal, setMovePageModal] = useState(false);
+  const [moveToParentModal, setMoveToParentModal] = useState(false);
   // params
   const { workspaceSlug } = useParams();
   // page flag
@@ -77,6 +80,7 @@ export const PageActions = observer(function PageActions(props: Props) {
     canCurrentUserDuplicatePage,
     canCurrentUserLockPage,
     canCurrentUserMovePage,
+    isContentEditable,
   } = page;
   // menu items
   const MENU_ITEMS = useMemo(
@@ -148,6 +152,14 @@ export const PageActions = observer(function PageActions(props: Props) {
           icon: FileOutput,
           shouldRender: canCurrentUserMovePage && isMovePageEnabled,
         },
+        {
+          key: "move-to-parent",
+          action: () => setMoveToParentModal(true),
+          title: "Move to…",
+          icon: FolderInput,
+          // The API refuses a PATCH on a locked page, and an archived page is outside the tree.
+          shouldRender: isContentEditable,
+        },
       ];
       if (extraOptions) {
         menuItems.push(...extraOptions);
@@ -166,6 +178,7 @@ export const PageActions = observer(function PageActions(props: Props) {
       canCurrentUserDeletePage,
       canCurrentUserMovePage,
       isMovePageEnabled,
+      isContentEditable,
       pageOperations,
     ]
   );
@@ -181,6 +194,12 @@ export const PageActions = observer(function PageActions(props: Props) {
   return (
     <>
       <MovePageModal isOpen={movePageModal} onClose={() => setMovePageModal(false)} page={page} />
+      <MovePageToParentModal
+        isOpen={moveToParentModal}
+        onClose={() => setMoveToParentModal(false)}
+        page={page}
+        storeType={storeType}
+      />
       <DeletePageModal
         isOpen={deletePageModal}
         onClose={() => setDeletePageModal(false)}

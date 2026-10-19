@@ -10,6 +10,7 @@ import { action, computed, makeObservable, observable, reaction, runInAction } f
 import { EPageAccess } from "@plane/constants";
 import type { TChangeHandlerProps } from "@plane/propel/emoji-icon-picker";
 import type { TDocumentPayload, TLogoProps, TNameDescriptionLoader, TPage } from "@plane/types";
+import { isAllowedPageParent } from "@plane/utils";
 // plane web store
 import { ExtendedBasePage } from "@/plane-web/store/pages/extended-base-page";
 import type { RootStore } from "@/plane-web/store/root.store";
@@ -41,6 +42,7 @@ export type TBasePage = TPage & {
   addToFavorites: () => Promise<void>;
   removePageFromFavorites: () => Promise<void>;
   duplicate: () => Promise<TPage | undefined>;
+  updateParent: (parentId: string | null) => Promise<void>;
   mutateProperties: (data: Partial<TPage>, shouldUpdateName?: boolean) => void;
   setSyncingStatus: (status: "syncing" | "synced" | "error") => void;
   // sub-store
@@ -189,6 +191,7 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       addToFavorites: action,
       removePageFromFavorites: action,
       duplicate: action,
+      updateParent: action,
       mutateProperties: action,
     });
 
@@ -574,6 +577,38 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
    * @description duplicate the page
    */
   duplicate = async () => await this.services.duplicate();
+
+  /**
+   * @description move the page under another page, or to the top level with `null` (Move to…).
+   * Refuses the page itself and its own sub-pages, so the tree cannot cycle. Reverts on a failed save.
+   */
+  updateParent = async (parentId: string | null) => {
+    if (!this.id) return;
+    const nextParent = parentId || null;
+    const currentParent = this.parent || null;
+    if (nextParent === currentParent) return;
+
+    if (nextParent) {
+      const pages = Object.values(this.rootStore.projectPages.data ?? {}).flatMap((page) =>
+        page.id ? [{ id: page.id, parent: page.parent }] : []
+      );
+      if (!isAllowedPageParent(this.id, nextParent, pages)) {
+        throw new Error("A page cannot be moved under itself or one of its sub-pages.");
+      }
+    }
+
+    runInAction(() => {
+      this.parent = nextParent;
+    });
+    try {
+      await this.services.update({ parent: nextParent });
+    } catch (error) {
+      runInAction(() => {
+        this.parent = currentParent;
+      });
+      throw error;
+    }
+  };
 
   /**
    * @description mutate multiple properties at once

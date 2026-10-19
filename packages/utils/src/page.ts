@@ -100,6 +100,8 @@ export const getPageName = (name: string | undefined) => {
 export {
   buildPageTree,
   collapseBreadcrumbMiddle,
+  collectPageDescendantIds,
+  isAllowedPageParent,
   walkPageAncestors,
   type TBreadcrumbSegment,
   type TPageAncestry,
