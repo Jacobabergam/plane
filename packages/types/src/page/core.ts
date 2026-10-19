@@ -8,6 +8,16 @@ import type { TLogoProps } from "../common";
 import type { EPageAccess } from "../enums";
 import type { TPageExtended } from "./extended";
 
+/**
+ * Per-page view settings stored in the page's `view_props` JSON column.
+ * The API replaces the whole object on PATCH, so writers must merge.
+ */
+export type TPageViewProps = {
+  full_width?: boolean;
+  /** Cover image: an uploaded page asset URL or a bundled gallery image URL. Null or omitted means no cover. */
+  cover_image?: string | null;
+};
+
 export type TPage = {
   access: EPageAccess | undefined;
   archived_at: string | null | undefined;
@@ -29,6 +39,7 @@ export type TPage = {
   updated_by: string | undefined;
   workspace: string | undefined;
   logo_props: TLogoProps | undefined;
+  view_props?: TPageViewProps | undefined;
   deleted_at: Date | undefined;
 } & TPageExtended;
 

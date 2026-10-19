@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // plane imports
 import { LIVE_BASE_PATH, LIVE_BASE_URL } from "@plane/constants";
@@ -44,6 +44,7 @@ import { useEditorFlagging } from "@/plane-web/hooks/use-editor-flagging";
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageContentLoader } from "../loaders/page-content-loader";
+import { PageCover, PageCoverPicker } from "./cover";
 import { PageEditorHeaderRoot } from "./header";
 import { PageSubPages } from "./sub-pages";
 import { PageContentBrowser } from "./summary";
@@ -95,6 +96,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   } = props;
   // refs
   const titleEditorRef = useRef<EditorTitleRefApi>(null);
+  // states
+  const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
   // store hooks
   const { data: currentUser } = useUser();
   const { getWorkspaceBySlug } = useWorkspace();
@@ -105,7 +108,9 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
     isContentEditable,
     editor: { editorRef, updateAssetsList },
     setSyncingStatus,
+    view_props,
   } = page;
+  const hasCoverImage = !!view_props?.cover_image;
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id ?? "";
   // use editor mention
   const { fetchMentions } = useEditorMention({
@@ -265,9 +270,25 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
         <div>
           <div className="page-header-container group/page-header">
             <div className={blockWidthClassName}>
-              <PageEditorHeaderRoot page={page} projectId={projectId} />
+              {hasCoverImage && (
+                <PageCover className="mt-4" page={page} onChangeCover={() => setIsCoverPickerOpen(true)} />
+              )}
+              <PageEditorHeaderRoot
+                page={page}
+                projectId={projectId}
+                onAddCover={projectId ? () => setIsCoverPickerOpen(true) : undefined}
+              />
             </div>
           </div>
+          {projectId && (
+            <PageCoverPicker
+              isOpen={isCoverPickerOpen}
+              onClose={() => setIsCoverPickerOpen(false)}
+              page={page}
+              projectId={projectId}
+              workspaceSlug={workspaceSlug}
+            />
+          )}
           <CollaborativeDocumentEditorWithRef
             editable={isContentEditable}
             id={pageId}

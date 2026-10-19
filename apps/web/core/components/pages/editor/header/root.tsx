@@ -13,31 +13,33 @@ import { cn } from "@plane/utils";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
+import { PageAddCoverButton } from "../cover";
 import { PageEditorHeaderLogoPicker } from "./logo-picker";
 
 type Props = {
+  /** Opens the cover picker. Omit it where covers are not supported (no "Add cover" button then). */
+  onAddCover?: () => void;
   page: TPageInstance;
   projectId?: string;
 };
 
 export const PageEditorHeaderRoot = observer(function PageEditorHeaderRoot(props: Props) {
-  const { page } = props;
+  const { onAddCover, page } = props;
   // states
   const [isLogoPickerOpen, setIsLogoPickerOpen] = useState(false);
   // derived values
   const { isContentEditable, logo_props, name, updatePageLogo } = page;
   const isLogoSelected = !!logo_props?.in_use;
   const isTitleEmpty = !name || name.trim() === "";
+  const hoverRevealClassName = cn("opacity-0 transition-all duration-200 group-hover/page-header:opacity-100", {
+    "opacity-100": isTitleEmpty,
+  });
 
   return (
     <>
-      <div className="flex h-[48px] items-end text-left">
+      <div className="flex h-[48px] items-end gap-1 text-left">
         {!isLogoSelected && (
-          <div
-            className={cn("opacity-0 transition-all duration-200 group-hover/page-header:opacity-100", {
-              "opacity-100": isTitleEmpty,
-            })}
-          >
+          <div className={hoverRevealClassName}>
             <EmojiPicker
               isOpen={isLogoPickerOpen}
               handleToggle={(val) => setIsLogoPickerOpen(val)}
@@ -69,6 +71,13 @@ export const PageEditorHeaderRoot = observer(function PageEditorHeaderRoot(props
               disabled={!isContentEditable}
             />
           </div>
+        )}
+        {onAddCover && (
+          <PageAddCoverButton
+            className={cn(hoverRevealClassName, "focus-within:opacity-100 pointer-coarse:opacity-100")}
+            onAddCover={onAddCover}
+            page={page}
+          />
         )}
       </div>
       <PageEditorHeaderLogoPicker className="mt-2 flex w-full flex-shrink-0" page={page} />

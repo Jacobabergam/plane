@@ -9,7 +9,7 @@ import { action, computed, makeObservable, observable, reaction, runInAction } f
 // plane imports
 import { EPageAccess } from "@plane/constants";
 import type { TChangeHandlerProps } from "@plane/propel/emoji-icon-picker";
-import type { TDocumentPayload, TLogoProps, TNameDescriptionLoader, TPage } from "@plane/types";
+import type { TDocumentPayload, TLogoProps, TNameDescriptionLoader, TPage, TPageViewProps } from "@plane/types";
 import { isAllowedPageParent } from "@plane/utils";
 // plane web store
 import { ExtendedBasePage } from "@/plane-web/store/pages/extended-base-page";
@@ -39,6 +39,7 @@ export type TBasePage = TPage & {
   archive: (params: { shouldSync?: boolean; archived_at?: string | null }) => Promise<void>;
   restore: (params: { shouldSync?: boolean }) => Promise<void>;
   updatePageLogo: (value: TChangeHandlerProps) => Promise<void>;
+  setCoverImage: (coverImage: string | null) => Promise<void>;
   addToFavorites: () => Promise<void>;
   removePageFromFavorites: () => Promise<void>;
   duplicate: () => Promise<TPage | undefined>;
@@ -88,6 +89,7 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
   id: string | undefined;
   name: string | undefined;
   logo_props: TLogoProps | undefined;
+  view_props: TPageViewProps | undefined;
   description_json: object | undefined;
   description_html: string | undefined;
   color: string | undefined;
@@ -126,6 +128,7 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
     this.id = page?.id || undefined;
     this.name = page?.name;
     this.logo_props = page?.logo_props || undefined;
+    this.view_props = page?.view_props || undefined;
     this.description_json = page?.description_json || undefined;
     this.description_html = page?.description_html || undefined;
     this.color = page?.color || undefined;
@@ -152,6 +155,7 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       id: observable.ref,
       name: observable.ref,
       logo_props: observable.ref,
+      view_props: observable.ref,
       description_json: observable.ref,
       description_html: observable.ref,
       color: observable.ref,
@@ -188,6 +192,7 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       archive: action,
       restore: action,
       updatePageLogo: action,
+      setCoverImage: action,
       addToFavorites: action,
       removePageFromFavorites: action,
       duplicate: action,
@@ -521,6 +526,34 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       console.error("Error in updating page logo", error);
       runInAction(() => {
         this.logo_props = originalLogoProps as TLogoProps;
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * @description set or clear the page cover image. view_props is replaced whole by the API,
+   * so the current value is merged in (full_width and any other key survive). Only view_props
+   * is sent, so the description fields are never touched.
+   * @param {string | null} coverImage asset URL or gallery image URL, null to remove
+   */
+  setCoverImage = async (coverImage: string | null) => {
+    const originalViewProps = this.view_props;
+    const viewProps: TPageViewProps = {
+      ...originalViewProps,
+      cover_image: coverImage,
+    };
+    runInAction(() => {
+      this.view_props = viewProps;
+    });
+    try {
+      await this.services.update({
+        view_props: viewProps,
+      });
+    } catch (error) {
+      console.error("Error in updating page cover image", error);
+      runInAction(() => {
+        this.view_props = originalViewProps;
       });
       throw error;
     }
