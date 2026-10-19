@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // plane imports
 import { LIVE_BASE_PATH, LIVE_BASE_URL } from "@plane/constants";
@@ -32,6 +32,7 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
 import { useInternalLinkNavigation } from "@/hooks/use-internal-link-navigation";
 import { usePageFilters } from "@/hooks/use-page-filters";
+import { usePageLinkQuickView } from "@/hooks/use-page-link-quick-view";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // plane web imports
 import type { TCustomEventHandlers } from "@/hooks/use-realtime-page-events";
@@ -44,6 +45,8 @@ import { useEditorFlagging } from "@/plane-web/hooks/use-editor-flagging";
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageContentLoader } from "../loaders/page-content-loader";
+import { PageQuickView } from "../quick-view";
+import { PageCover, PageCoverPicker } from "./cover";
 import { PageEditorHeaderRoot } from "./header";
 import { PageSubPages } from "./sub-pages";
 import { PageContentBrowser } from "./summary";
@@ -95,6 +98,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   } = props;
   // refs
   const titleEditorRef = useRef<EditorTitleRefApi>(null);
+  // states
+  const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
   // store hooks
   const { data: currentUser } = useUser();
   const { getWorkspaceBySlug } = useWorkspace();
@@ -105,7 +110,9 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
     isContentEditable,
     editor: { editorRef, updateAssetsList },
     setSyncingStatus,
+    view_props,
   } = page;
+  const hasCoverImage = !!view_props?.cover_image;
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id ?? "";
   // use editor mention
   const { fetchMentions } = useEditorMention({
@@ -126,6 +133,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   // page filters
   const { fontSize, fontStyle, isFullWidth } = usePageFilters();
   const navigateInternalLink = useInternalLinkNavigation();
+  // hover quick view for links to other pages
+  const pageLinkQuickView = usePageLinkQuickView({ workspaceSlug });
   // translation
   const { t } = useTranslation();
   // derived values
@@ -265,42 +274,61 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
         <div>
           <div className="page-header-container group/page-header">
             <div className={blockWidthClassName}>
-              <PageEditorHeaderRoot page={page} projectId={projectId} />
+              {hasCoverImage && (
+                <PageCover className="mt-4" page={page} onChangeCover={() => setIsCoverPickerOpen(true)} />
+              )}
+              <PageEditorHeaderRoot
+                page={page}
+                projectId={projectId}
+                onAddCover={projectId ? () => setIsCoverPickerOpen(true) : undefined}
+              />
             </div>
           </div>
-          <CollaborativeDocumentEditorWithRef
-            editable={isContentEditable}
-            id={pageId}
-            fileHandler={config.fileHandler}
-            handleEditorReady={handleEditorReady}
-            ref={editorForwardRef}
-            titleRef={titleEditorRef}
-            containerClassName="h-full p-0 pb-8"
-            displayConfig={displayConfig}
-            getEditorMetaData={getEditorMetaData}
-            mentionHandler={{
-              searchCallback: async (query) => {
-                const res = await fetchMentions(query);
-                if (!res) throw new Error("Failed in fetching mentions");
-                return res;
-              },
-              renderComponent: (props) => <EditorMentionsRoot {...props} />,
-              getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
-            }}
-            updatePageProperties={updatePageProperties}
-            realtimeConfig={realtimeConfig}
-            serverHandler={serverHandler}
-            user={userConfig}
-            disabledExtensions={documentEditorExtensions.disabled}
-            flaggedExtensions={documentEditorExtensions.flagged}
-            aiHandler={{
-              menu: getAIMenu,
-            }}
-            onAssetChange={updateAssetsList}
-            extendedEditorProps={extendedEditorProps}
-            navigateInternalLink={navigateInternalLink}
-            isFetchingFallbackBinary={isFetchingFallbackBinary}
-          />
+          {projectId && (
+            <PageCoverPicker
+              isOpen={isCoverPickerOpen}
+              onClose={() => setIsCoverPickerOpen(false)}
+              page={page}
+              projectId={projectId}
+              workspaceSlug={workspaceSlug}
+            />
+          )}
+          <div ref={pageLinkQuickView.containerRef}>
+            <CollaborativeDocumentEditorWithRef
+              editable={isContentEditable}
+              id={pageId}
+              fileHandler={config.fileHandler}
+              handleEditorReady={handleEditorReady}
+              ref={editorForwardRef}
+              titleRef={titleEditorRef}
+              containerClassName="h-full p-0 pb-8"
+              displayConfig={displayConfig}
+              getEditorMetaData={getEditorMetaData}
+              mentionHandler={{
+                searchCallback: async (query) => {
+                  const res = await fetchMentions(query);
+                  if (!res) throw new Error("Failed in fetching mentions");
+                  return res;
+                },
+                renderComponent: (props) => <EditorMentionsRoot {...props} />,
+                getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
+              }}
+              updatePageProperties={updatePageProperties}
+              realtimeConfig={realtimeConfig}
+              serverHandler={serverHandler}
+              user={userConfig}
+              disabledExtensions={documentEditorExtensions.disabled}
+              flaggedExtensions={documentEditorExtensions.flagged}
+              aiHandler={{
+                menu: getAIMenu,
+              }}
+              onAssetChange={updateAssetsList}
+              extendedEditorProps={extendedEditorProps}
+              navigateInternalLink={navigateInternalLink}
+              isFetchingFallbackBinary={isFetchingFallbackBinary}
+            />
+          </div>
+          <PageQuickView controller={pageLinkQuickView} />
           {projectId && (
             <div className={cn(blockWidthClassName, "pb-64")}>
               <PageSubPages page={page} projectId={projectId} storeType={storeType} workspaceSlug={workspaceSlug} />

@@ -6,6 +6,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
+import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
@@ -13,18 +15,43 @@ import useSWR from "swr";
 import { EPageAccess } from "@plane/constants";
 import { useLocalStorage } from "@plane/hooks";
 import { CloseIcon, PlusIcon, SearchIcon } from "@plane/propel/icons";
-import { cn, mergeExpandedPageIds } from "@plane/utils";
+import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { cn, getPageDropValidity, mergeExpandedPageIds } from "@plane/utils";
 // components
 import { CreatePageModal } from "@/components/pages/modals/create-page-modal";
+import { PageQuickView } from "@/components/pages/quick-view";
+// hooks
+import { usePageLinkQuickView } from "@/hooks/use-page-link-quick-view";
 // plane web hooks
 import { EPageStoreType, usePageStore } from "@/plane-web/hooks/store";
 // local imports
 import { DOCS_SIDEBAR_MAX_WIDTH, DOCS_SIDEBAR_MIN_WIDTH, useDocsSidebar } from "./docs-sidebar-context";
-import { DocsSidebarRow } from "./docs-sidebar-row";
+import type { TDocsSidebarDnd } from "./docs-sidebar-dnd";
+import { DocsSidebarRootDropZone, isDocsSidebarDragData } from "./docs-sidebar-dnd";
+import { DocsSidebarRow, docsSidebarRowDomId } from "./docs-sidebar-row";
 
 const storeType = EPageStoreType.PROJECT;
 
 const expandedStorageKey = (projectId: string) => `pages_docs_sidebar_expanded:${projectId}`;
+
+const COARSE_POINTER_QUERY = "(pointer: coarse)";
+
+/** Touch-first devices get no drag and drop; a long press there should still open the link. */
+const useIsCoarsePointer = () => {
+  const [isCoarse, setIsCoarse] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(COARSE_POINTER_QUERY).matches
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(COARSE_POINTER_QUERY);
+    const onChange = () => setIsCoarse(media.matches);
+    onChange();
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  return isCoarse;
+};
 
 function DocsSidebarSkeleton() {
   return (
@@ -60,17 +87,27 @@ export const DocsSidebar = observer(function DocsSidebar() {
   const [createParentId, setCreateParentId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
+  const isCoarsePointer = useIsCoarsePointer();
+  const listRef = useRef<HTMLDivElement | null>(null);
+  // Page to scroll into view once a drop has re-rendered the tree.
+  const revealPageIdRef = useRef<string | null>(null);
   const persistedRef = useRef<string[]>(storedExpanded ?? []);
   persistedRef.current = storedExpanded ?? [];
   const setMobileOpenRef = useRef(sidebar?.setMobileOpen);
   setMobileOpenRef.current = sidebar?.setMobileOpen;
+  const pageLinkQuickView = usePageLinkQuickView({ workspaceSlug: workspaceSlugString, openDelay: 600 });
 
   useSWR(workspaceSlugString && projectIdString ? `PROJECT_PAGES_${projectIdString}` : null, () =>
     fetchPagesList(workspaceSlugString, projectIdString)
   );
 
   const tree = projectIdString ? getDocsNavigationTree(projectIdString, query) : { rootIds: [], childIdsByParent: {} };
+  // Unfiltered tree for cycle checks: a search hides descendants that a drop must still respect.
+  const fullTree = projectIdString ? getDocsNavigationTree(projectIdString) : tree;
   const searching = query.trim().length > 0;
+  const isPanelVisible = !!sidebar && (sidebar.isMobileOpen || (!sidebar.isMobile && sidebar.isDesktopOpen));
+  const isDndEnabled = !!sidebar && !sidebar.isMobile && !sidebar.isMobileOpen && !isCoarsePointer;
   const ancestorIds = currentPageId ? getPageAncestry(currentPageId).ancestorIds : [];
   const ancestorKey = ancestorIds.join("\n");
 
@@ -86,9 +123,40 @@ export const DocsSidebar = observer(function DocsSidebar() {
     setMobileOpenRef.current?.(false);
   }, [currentPageId]);
 
+  useEffect(() => {
+    if (!isDndEnabled || !projectIdString) return;
+    return monitorForElements({
+      canMonitor: ({ source }) => isDocsSidebarDragData(source.data) && source.data.projectId === projectIdString,
+      onDragStart: ({ source }) => {
+        if (isDocsSidebarDragData(source.data)) setDraggingPageId(source.data.pageId);
+      },
+      onDrop: () => setDraggingPageId(null),
+    });
+  }, [isDndEnabled, projectIdString]);
+
+  useEffect(() => {
+    const element = listRef.current;
+    if (!element || !isDndEnabled || !isPanelVisible) return;
+    return autoScrollForElements({
+      element,
+      canScroll: ({ source }) => isDocsSidebarDragData(source.data),
+      getAllowedAxis: () => "vertical",
+    });
+  }, [isDndEnabled, isPanelVisible, projectIdString, workspaceSlugString]);
+
+  // After a move, keep the moved row on screen once its new parent has expanded.
+  useEffect(() => {
+    const revealId = revealPageIdRef.current;
+    if (!revealId) return;
+    const row = document.getElementById(docsSidebarRowDomId(revealId));
+    if (!row) return;
+    revealPageIdRef.current = null;
+    row.scrollIntoView({ block: "nearest" });
+  });
+
   if (!sidebar || !projectIdString || !workspaceSlugString) return null;
 
-  const { isDesktopOpen, isMobile, isMobileOpen, setMobileOpen, setWidth, width } = sidebar;
+  const { isMobile, isMobileOpen, setMobileOpen, setWidth, width } = sidebar;
   const panelWidth = dragWidth ?? width;
   const persisted = storedExpanded ?? [];
   const isExpanded = (id: string) => {
@@ -111,11 +179,51 @@ export const DocsSidebar = observer(function DocsSidebar() {
     else next.add(id);
     setStoredExpanded([...next]);
   };
+  const expandPage = (id: string) => {
+    if (searching) {
+      setSearchExpanded((previous) => ({ ...previous, [id]: true }));
+      return;
+    }
+    const required = [...getPageAncestry(id).ancestorIds, id];
+    const current = persistedRef.current;
+    const merged = mergeExpandedPageIds(current, required);
+    if (merged.length === current.length) return;
+    persistedRef.current = merged;
+    setStoredExpanded(merged);
+  };
+  const getDropValidity = (draggedId: string, targetParentId: string | null) =>
+    getPageDropValidity({
+      childIdsByParent: fullTree.childIdsByParent,
+      draggedId,
+      currentParentId: getPageById(draggedId)?.parent,
+      targetParentId,
+    });
+  const movePage = (draggedId: string, parentId: string | null) => {
+    const page = getPageById(draggedId);
+    if (!page || page.archived_at || getDropValidity(draggedId, parentId) !== "valid") return;
+    if (parentId) expandPage(parentId);
+    revealPageIdRef.current = draggedId;
+    // `updateParent` sets `parent` in the store first, guards against cycles, and puts the old value back on failure.
+    page.updateParent(parentId).catch(() => {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Couldn't move the page",
+        message: "Please try again.",
+      });
+    });
+  };
+  const dnd: TDocsSidebarDnd = {
+    isEnabled: isDndEnabled,
+    draggingPageId,
+    getDropValidity,
+    onExpand: expandPage,
+    onMove: movePage,
+  };
   const openCreate = (parentId: string | null) => {
     setCreateParentId(parentId);
     setIsCreateOpen(true);
   };
-  const showPanel = isMobileOpen || (!isMobile && isDesktopOpen);
+  const showPanel = isPanelVisible;
   const isLoading = loader === "init-loader" && tree.rootIds.length === 0;
   const parentPage = createParentId ? getPageById(createParentId) : undefined;
 
@@ -204,6 +312,7 @@ export const DocsSidebar = observer(function DocsSidebar() {
                 onChange={(event) => {
                   setQuery(event.target.value);
                   setSearchExpanded({});
+                  revealPageIdRef.current = null;
                 }}
                 placeholder="Search pages"
                 aria-label="Search pages"
@@ -211,32 +320,43 @@ export const DocsSidebar = observer(function DocsSidebar() {
               />
             </label>
           </div>
-          <div className="vertical-scrollbar scrollbar-sm flex-1 overflow-y-auto px-1.5 pb-4">
-            {isLoading && <DocsSidebarSkeleton />}
-            {!isLoading && error && tree.rootIds.length === 0 && (
-              <p className="px-2 py-3 text-13 text-tertiary">{error.description}</p>
-            )}
-            {!isLoading && !error && tree.rootIds.length === 0 && (
-              <p className="px-2 py-3 text-13 text-tertiary">{searching ? "No matching pages" : "No pages yet"}</p>
-            )}
-            {!isLoading &&
-              tree.rootIds.map((rootId) => (
-                <DocsSidebarRow
-                  key={rootId}
-                  childIdsByParent={tree.childIdsByParent}
-                  depth={0}
-                  isCurrent={(id) => id === currentPageId}
-                  isExpanded={isExpanded}
-                  onAddChild={(id) => openCreate(id)}
-                  onNavigate={() => setMobileOpen(false)}
-                  onToggle={onToggle}
-                  pageId={rootId}
-                  projectId={projectIdString}
-                  storeType={storeType}
-                  workspaceSlug={workspaceSlugString}
-                />
-              ))}
+          <div
+            ref={(node) => {
+              listRef.current = node;
+              pageLinkQuickView.containerRef(node);
+            }}
+            className="vertical-scrollbar scrollbar-sm flex flex-1 flex-col overflow-y-auto px-1.5 pb-4"
+          >
+            <div className="shrink-0">
+              {isLoading && <DocsSidebarSkeleton />}
+              {!isLoading && error && tree.rootIds.length === 0 && (
+                <p className="px-2 py-3 text-13 text-tertiary">{error.description}</p>
+              )}
+              {!isLoading && !error && tree.rootIds.length === 0 && (
+                <p className="px-2 py-3 text-13 text-tertiary">{searching ? "No matching pages" : "No pages yet"}</p>
+              )}
+              {!isLoading &&
+                tree.rootIds.map((rootId) => (
+                  <DocsSidebarRow
+                    key={rootId}
+                    childIdsByParent={tree.childIdsByParent}
+                    depth={0}
+                    dnd={dnd}
+                    isCurrent={(id) => id === currentPageId}
+                    isExpanded={isExpanded}
+                    onAddChild={(id) => openCreate(id)}
+                    onNavigate={() => setMobileOpen(false)}
+                    onToggle={onToggle}
+                    pageId={rootId}
+                    projectId={projectIdString}
+                    storeType={storeType}
+                    workspaceSlug={workspaceSlugString}
+                  />
+                ))}
+            </div>
+            {isDndEnabled && !isLoading && <DocsSidebarRootDropZone dnd={dnd} projectId={projectIdString} />}
           </div>
+          <PageQuickView controller={pageLinkQuickView} />
           {!isMobile && (
             <div
               role="separator"

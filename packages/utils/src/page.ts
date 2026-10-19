@@ -109,3 +109,4 @@ export {
   type TPageTreeSource,
 } from "./page-tree";
 export { buildDocsNavigationTree, mergeExpandedPageIds, parentIdsInTree, type TDocsNavSource } from "./page-nav";
+export { htmlToExcerpt, parsePageLinkPath, type TPageLinkTarget } from "./page-quick-view";

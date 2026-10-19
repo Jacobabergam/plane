@@ -8,15 +8,39 @@ import { autoUpdate, flip, hide, shift, useDismiss, useFloating, useInteractions
 import type { Editor } from "@tiptap/react";
 import { useEditorState } from "@tiptap/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-
+// plane imports
+import { parsePageLinkPath } from "@plane/utils";
 // components
 import type { LinkViewProps } from "@/components/links";
 import { LinkView } from "@/components/links";
 // helpers
-import { findLinkAnchor, followEditorLink, isNodeViewChrome } from "@/extensions/custom-link/helpers/link-navigation";
+import {
+  findLinkAnchor,
+  followEditorLink,
+  isInternalAppLink,
+  isNodeViewChrome,
+  toAppRouterPath,
+} from "@/extensions/custom-link/helpers/link-navigation";
 
 const TOUCH_LONG_PRESS_MS = 450;
 const TOUCH_MOVE_TOLERANCE_PX = 10;
+/** Set by the app on a container that shows its own quick view for page links; the value is the workspace slug. */
+const PAGE_LINK_QUICK_VIEW_ATTRIBUTE = "data-page-link-quick-view";
+
+/**
+ * True for an internal link to a project page in the workspace whose container shows the app's
+ * page quick view. The hover URL preview stays out of the way there; touch long-press and the
+ * selection bubble menu still edit the link.
+ */
+const isAppPageQuickViewLink = (anchor: HTMLAnchorElement, hasInternalNavigation: boolean): boolean => {
+  if (!hasInternalNavigation) return false;
+  const host = anchor.closest(`[${PAGE_LINK_QUICK_VIEW_ATTRIBUTE}]`);
+  const workspaceSlug = host?.getAttribute(PAGE_LINK_QUICK_VIEW_ATTRIBUTE);
+  if (!workspaceSlug) return false;
+  const href = anchor.getAttribute("href");
+  if (!href || !isInternalAppLink(href)) return false;
+  return parsePageLinkPath(toAppRouterPath(href))?.workspaceSlug === workspaceSlug;
+};
 
 type Props = {
   editor: Editor;
@@ -154,9 +178,11 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
       if (suppressHoverRef.current) return;
       const target = findLinkAnchor(event.target, containerRef.current);
       if (!target) return;
+      // The app shows a page quick view for these; do not stack the URL preview on top of it.
+      if (isAppPageQuickViewLink(target, !!editor?.storage.link?.navigateInternalLink)) return;
       presentLinkPreview(target, "hover");
     },
-    [containerRef, presentLinkPreview]
+    [containerRef, editor, presentLinkPreview]
   );
 
   // Handle mouse enter on floating element (cancel close timeout)
