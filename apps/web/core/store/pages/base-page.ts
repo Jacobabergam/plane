@@ -288,16 +288,18 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       runInAction(() => {
         Object.keys(pageData).forEach((key) => {
           const currentPageKey = key as keyof TPage;
-          set(this, key, pageData[currentPageKey] || undefined);
+          // Keep `null` (e.g. `parent: null` for a top-level page) instead of turning it into undefined.
+          set(this, key, pageData[currentPageKey] ?? null);
         });
       });
 
-      return await this.services.update(currentPage);
+      // Send only the changed fields: the old snapshot would PATCH the previous values back.
+      return await this.services.update(pageData);
     } catch (error) {
       runInAction(() => {
         Object.keys(pageData).forEach((key) => {
           const currentPageKey = key as keyof TPage;
-          set(this, key, currentPage?.[currentPageKey] || undefined);
+          set(this, key, currentPage?.[currentPageKey] ?? null);
         });
       });
       throw error;
