@@ -12,6 +12,9 @@ import { getPageName } from "@plane/utils";
 // components
 import { CreatePageModal } from "@/components/pages/modals/create-page-modal";
 import { PageLogo } from "@/components/pages/page-logo";
+import { PageQuickView } from "@/components/pages/quick-view";
+// hooks
+import { usePageLinkQuickView } from "@/hooks/use-page-link-quick-view";
 // plane web hooks
 import type { EPageStoreType } from "@/plane-web/hooks/store";
 import { usePage, usePageStore } from "@/plane-web/hooks/store";
@@ -42,13 +45,18 @@ export const PageSubPages = observer(function PageSubPages(props: TPageSubPagesP
   const { page, projectId, storeType, workspaceSlug } = props;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { canCurrentUserCreatePage, getChildPageIds } = usePageStore(storeType);
+  const pageLinkQuickView = usePageLinkQuickView({ workspaceSlug, openDelay: 600 });
   const childIds = page.id ? getChildPageIds(page.id) : [];
   const canAdd = canCurrentUserCreatePage && !page.archived_at && !!page.id;
 
   if (childIds.length === 0 && !canAdd) return null;
 
   return (
-    <section className="mt-2 flex flex-col pb-4" aria-label="Sub-pages">
+    <section
+      ref={pageLinkQuickView.containerRef}
+      aria-label="Sub-pages"
+      className="mt-2 flex flex-col pb-4"
+    >
       <h3 className="px-2 pt-4 pb-1 text-13 font-medium text-tertiary">Sub-pages</h3>
       {page.id &&
         childIds.map((childId) => (
@@ -59,6 +67,7 @@ export const PageSubPages = observer(function PageSubPages(props: TPageSubPagesP
             storeType={storeType}
           />
         ))}
+      <PageQuickView controller={pageLinkQuickView} />
       {canAdd && (
         <button
           type="button"

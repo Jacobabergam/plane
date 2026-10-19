@@ -32,6 +32,7 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
 import { useInternalLinkNavigation } from "@/hooks/use-internal-link-navigation";
 import { usePageFilters } from "@/hooks/use-page-filters";
+import { usePageLinkQuickView } from "@/hooks/use-page-link-quick-view";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // plane web imports
 import type { TCustomEventHandlers } from "@/hooks/use-realtime-page-events";
@@ -44,6 +45,7 @@ import { useEditorFlagging } from "@/plane-web/hooks/use-editor-flagging";
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageContentLoader } from "../loaders/page-content-loader";
+import { PageQuickView } from "../quick-view";
 import { PageCover, PageCoverPicker } from "./cover";
 import { PageEditorHeaderRoot } from "./header";
 import { PageSubPages } from "./sub-pages";
@@ -131,6 +133,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   // page filters
   const { fontSize, fontStyle, isFullWidth } = usePageFilters();
   const navigateInternalLink = useInternalLinkNavigation();
+  // hover quick view for links to other pages
+  const pageLinkQuickView = usePageLinkQuickView({ workspaceSlug });
   // translation
   const { t } = useTranslation();
   // derived values
@@ -289,39 +293,42 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
               workspaceSlug={workspaceSlug}
             />
           )}
-          <CollaborativeDocumentEditorWithRef
-            editable={isContentEditable}
-            id={pageId}
-            fileHandler={config.fileHandler}
-            handleEditorReady={handleEditorReady}
-            ref={editorForwardRef}
-            titleRef={titleEditorRef}
-            containerClassName="h-full p-0 pb-8"
-            displayConfig={displayConfig}
-            getEditorMetaData={getEditorMetaData}
-            mentionHandler={{
-              searchCallback: async (query) => {
-                const res = await fetchMentions(query);
-                if (!res) throw new Error("Failed in fetching mentions");
-                return res;
-              },
-              renderComponent: (props) => <EditorMentionsRoot {...props} />,
-              getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
-            }}
-            updatePageProperties={updatePageProperties}
-            realtimeConfig={realtimeConfig}
-            serverHandler={serverHandler}
-            user={userConfig}
-            disabledExtensions={documentEditorExtensions.disabled}
-            flaggedExtensions={documentEditorExtensions.flagged}
-            aiHandler={{
-              menu: getAIMenu,
-            }}
-            onAssetChange={updateAssetsList}
-            extendedEditorProps={extendedEditorProps}
-            navigateInternalLink={navigateInternalLink}
-            isFetchingFallbackBinary={isFetchingFallbackBinary}
-          />
+          <div ref={pageLinkQuickView.containerRef}>
+            <CollaborativeDocumentEditorWithRef
+              editable={isContentEditable}
+              id={pageId}
+              fileHandler={config.fileHandler}
+              handleEditorReady={handleEditorReady}
+              ref={editorForwardRef}
+              titleRef={titleEditorRef}
+              containerClassName="h-full p-0 pb-8"
+              displayConfig={displayConfig}
+              getEditorMetaData={getEditorMetaData}
+              mentionHandler={{
+                searchCallback: async (query) => {
+                  const res = await fetchMentions(query);
+                  if (!res) throw new Error("Failed in fetching mentions");
+                  return res;
+                },
+                renderComponent: (props) => <EditorMentionsRoot {...props} />,
+                getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
+              }}
+              updatePageProperties={updatePageProperties}
+              realtimeConfig={realtimeConfig}
+              serverHandler={serverHandler}
+              user={userConfig}
+              disabledExtensions={documentEditorExtensions.disabled}
+              flaggedExtensions={documentEditorExtensions.flagged}
+              aiHandler={{
+                menu: getAIMenu,
+              }}
+              onAssetChange={updateAssetsList}
+              extendedEditorProps={extendedEditorProps}
+              navigateInternalLink={navigateInternalLink}
+              isFetchingFallbackBinary={isFetchingFallbackBinary}
+            />
+          </div>
+          <PageQuickView controller={pageLinkQuickView} />
           {projectId && (
             <div className={cn(blockWidthClassName, "pb-64")}>
               <PageSubPages page={page} projectId={projectId} storeType={storeType} workspaceSlug={workspaceSlug} />

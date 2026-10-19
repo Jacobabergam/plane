@@ -19,6 +19,9 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { cn, getPageDropValidity, mergeExpandedPageIds } from "@plane/utils";
 // components
 import { CreatePageModal } from "@/components/pages/modals/create-page-modal";
+import { PageQuickView } from "@/components/pages/quick-view";
+// hooks
+import { usePageLinkQuickView } from "@/hooks/use-page-link-quick-view";
 // plane web hooks
 import { EPageStoreType, usePageStore } from "@/plane-web/hooks/store";
 // local imports
@@ -93,6 +96,7 @@ export const DocsSidebar = observer(function DocsSidebar() {
   persistedRef.current = storedExpanded ?? [];
   const setMobileOpenRef = useRef(sidebar?.setMobileOpen);
   setMobileOpenRef.current = sidebar?.setMobileOpen;
+  const pageLinkQuickView = usePageLinkQuickView({ workspaceSlug: workspaceSlugString, openDelay: 600 });
 
   useSWR(workspaceSlugString && projectIdString ? `PROJECT_PAGES_${projectIdString}` : null, () =>
     fetchPagesList(workspaceSlugString, projectIdString)
@@ -317,7 +321,10 @@ export const DocsSidebar = observer(function DocsSidebar() {
             </label>
           </div>
           <div
-            ref={listRef}
+            ref={(node) => {
+              listRef.current = node;
+              pageLinkQuickView.containerRef(node);
+            }}
             className="vertical-scrollbar scrollbar-sm flex flex-1 flex-col overflow-y-auto px-1.5 pb-4"
           >
             <div className="shrink-0">
@@ -349,6 +356,7 @@ export const DocsSidebar = observer(function DocsSidebar() {
             </div>
             {isDndEnabled && !isLoading && <DocsSidebarRootDropZone dnd={dnd} projectId={projectIdString} />}
           </div>
+          <PageQuickView controller={pageLinkQuickView} />
           {!isMobile && (
             <div
               role="separator"
