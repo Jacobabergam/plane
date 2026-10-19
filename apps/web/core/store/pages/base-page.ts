@@ -242,6 +242,7 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       parent: this.parent,
       access: this.access,
       logo_props: this.logo_props,
+      view_props: this.view_props,
       is_favorite: this.is_favorite,
       is_locked: this.is_locked,
       archived_at: this.archived_at,
