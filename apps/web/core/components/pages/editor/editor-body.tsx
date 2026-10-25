@@ -46,6 +46,7 @@ import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageContentLoader } from "../loaders/page-content-loader";
 import { PageQuickView } from "../quick-view";
+import { PageChecklistFilter, useChecklistCounts, useChecklistFilter } from "./checklist-filter";
 import { PageCover, PageCoverPicker } from "./cover";
 import { PageEditorHeaderRoot } from "./header";
 import { PageSubPages } from "./sub-pages";
@@ -98,6 +99,7 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   } = props;
   // refs
   const titleEditorRef = useRef<EditorTitleRefApi>(null);
+  const checklistContainerRef = useRef<HTMLDivElement>(null);
   // states
   const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
   // store hooks
@@ -242,6 +244,9 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   );
 
   const isPageLoading = pageId === undefined || !realtimeConfig;
+  // homelab: Open / Done filter for to-do lists (checklist-filter.tsx)
+  const checklistCounts = useChecklistCounts(checklistContainerRef, !isPageLoading);
+  const [checklistFilter, setChecklistFilter] = useChecklistFilter(pageId);
 
   if (isPageLoading) return <PageContentLoader className={blockWidthClassName} />;
 
@@ -293,40 +298,48 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
               workspaceSlug={workspaceSlug}
             />
           )}
-          <div ref={pageLinkQuickView.containerRef}>
-            <CollaborativeDocumentEditorWithRef
-              editable={isContentEditable}
-              id={pageId}
-              fileHandler={config.fileHandler}
-              handleEditorReady={handleEditorReady}
-              ref={editorForwardRef}
-              titleRef={titleEditorRef}
-              containerClassName="h-full p-0 pb-8"
-              displayConfig={displayConfig}
-              getEditorMetaData={getEditorMetaData}
-              mentionHandler={{
-                searchCallback: async (query) => {
-                  const res = await fetchMentions(query);
-                  if (!res) throw new Error("Failed in fetching mentions");
-                  return res;
-                },
-                renderComponent: (props) => <EditorMentionsRoot {...props} />,
-                getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
-              }}
-              updatePageProperties={updatePageProperties}
-              realtimeConfig={realtimeConfig}
-              serverHandler={serverHandler}
-              user={userConfig}
-              disabledExtensions={documentEditorExtensions.disabled}
-              flaggedExtensions={documentEditorExtensions.flagged}
-              aiHandler={{
-                menu: getAIMenu,
-              }}
-              onAssetChange={updateAssetsList}
-              extendedEditorProps={extendedEditorProps}
-              navigateInternalLink={navigateInternalLink}
-              isFetchingFallbackBinary={isFetchingFallbackBinary}
-            />
+          <PageChecklistFilter
+            className={cn(blockWidthClassName, "sticky top-0 z-[4] bg-surface-1 px-page-x")}
+            counts={checklistCounts}
+            filter={checklistFilter}
+            onChange={setChecklistFilter}
+          />
+          <div ref={checklistContainerRef} data-checklist-filter={checklistFilter}>
+            <div ref={pageLinkQuickView.containerRef}>
+              <CollaborativeDocumentEditorWithRef
+                editable={isContentEditable}
+                id={pageId}
+                fileHandler={config.fileHandler}
+                handleEditorReady={handleEditorReady}
+                ref={editorForwardRef}
+                titleRef={titleEditorRef}
+                containerClassName="h-full p-0 pb-8"
+                displayConfig={displayConfig}
+                getEditorMetaData={getEditorMetaData}
+                mentionHandler={{
+                  searchCallback: async (query) => {
+                    const res = await fetchMentions(query);
+                    if (!res) throw new Error("Failed in fetching mentions");
+                    return res;
+                  },
+                  renderComponent: (props) => <EditorMentionsRoot {...props} />,
+                  getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
+                }}
+                updatePageProperties={updatePageProperties}
+                realtimeConfig={realtimeConfig}
+                serverHandler={serverHandler}
+                user={userConfig}
+                disabledExtensions={documentEditorExtensions.disabled}
+                flaggedExtensions={documentEditorExtensions.flagged}
+                aiHandler={{
+                  menu: getAIMenu,
+                }}
+                onAssetChange={updateAssetsList}
+                extendedEditorProps={extendedEditorProps}
+                navigateInternalLink={navigateInternalLink}
+                isFetchingFallbackBinary={isFetchingFallbackBinary}
+              />
+            </div>
           </div>
           <PageQuickView controller={pageLinkQuickView} />
           {projectId && (

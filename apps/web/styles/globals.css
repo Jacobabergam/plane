@@ -198,3 +198,10 @@
     0 0 4px --alpha(var(--background-color-accent-primary) / 40%) !important;
   will-change: transform, opacity;
 }
+
+/* homelab: the page checklist filter (pages/editor/checklist-filter.tsx) hides ticked or
+   unticked to-do items by the data-checklist-filter attribute on the editor's wrapper. */
+[data-checklist-filter="open"] ul[data-type="taskList"] > li[data-checked="true"],
+[data-checklist-filter="done"] ul[data-type="taskList"] > li:not([data-checked="true"]) {
+  display: none;
+}
