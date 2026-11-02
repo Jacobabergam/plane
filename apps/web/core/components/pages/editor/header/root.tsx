@@ -14,17 +14,20 @@ import { cn } from "@plane/utils";
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageAddCoverButton } from "../cover";
+import { PageAddHtmlButton } from "../html-document";
 import { PageEditorHeaderLogoPicker } from "./logo-picker";
 
 type Props = {
   /** Opens the cover picker. Omit it where covers are not supported (no "Add cover" button then). */
   onAddCover?: () => void;
+  /** Opens the HTML design upload. Omit it where pages have no project (no "Add HTML" button then). */
+  onAddHtml?: () => void;
   page: TPageInstance;
   projectId?: string;
 };
 
 export const PageEditorHeaderRoot = observer(function PageEditorHeaderRoot(props: Props) {
-  const { onAddCover, page } = props;
+  const { onAddCover, onAddHtml, page } = props;
   // states
   const [isLogoPickerOpen, setIsLogoPickerOpen] = useState(false);
   // derived values
@@ -76,6 +79,13 @@ export const PageEditorHeaderRoot = observer(function PageEditorHeaderRoot(props
           <PageAddCoverButton
             className={cn(hoverRevealClassName, "focus-within:opacity-100 pointer-coarse:opacity-100")}
             onAddCover={onAddCover}
+            page={page}
+          />
+        )}
+        {onAddHtml && (
+          <PageAddHtmlButton
+            className={cn(hoverRevealClassName, "focus-within:opacity-100 pointer-coarse:opacity-100")}
+            onAddHtml={onAddHtml}
             page={page}
           />
         )}

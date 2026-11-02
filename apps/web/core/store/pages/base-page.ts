@@ -9,7 +9,14 @@ import { action, computed, makeObservable, observable, reaction, runInAction } f
 // plane imports
 import { EPageAccess } from "@plane/constants";
 import type { TChangeHandlerProps } from "@plane/propel/emoji-icon-picker";
-import type { TDocumentPayload, TLogoProps, TNameDescriptionLoader, TPage, TPageViewProps } from "@plane/types";
+import type {
+  TDocumentPayload,
+  TLogoProps,
+  TNameDescriptionLoader,
+  TPage,
+  TPageHtmlDocument,
+  TPageViewProps,
+} from "@plane/types";
 import { isAllowedPageParent } from "@plane/utils";
 // plane web store
 import { ExtendedBasePage } from "@/plane-web/store/pages/extended-base-page";
@@ -40,6 +47,7 @@ export type TBasePage = TPage & {
   restore: (params: { shouldSync?: boolean }) => Promise<void>;
   updatePageLogo: (value: TChangeHandlerProps) => Promise<void>;
   setCoverImage: (coverImage: string | null) => Promise<void>;
+  setHtmlDocument: (htmlDocument: TPageHtmlDocument | null) => void;
   addToFavorites: () => Promise<void>;
   removePageFromFavorites: () => Promise<void>;
   duplicate: () => Promise<TPage | undefined>;
@@ -193,6 +201,7 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       restore: action,
       updatePageLogo: action,
       setCoverImage: action,
+      setHtmlDocument: action,
       addToFavorites: action,
       removePageFromFavorites: action,
       duplicate: action,
@@ -560,6 +569,18 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       });
       throw error;
     }
+  };
+
+  /**
+   * @description reflect a change the page's `/html/` route already saved (upload, replace, remove). Local only:
+   * the server owns `view_props.html_document`, and a page PATCH never changes it.
+   * @param {TPageHtmlDocument | null} htmlDocument the stored document's metadata, null once removed
+   */
+  setHtmlDocument = (htmlDocument: TPageHtmlDocument | null) => {
+    const viewProps: TPageViewProps = { ...this.view_props };
+    if (htmlDocument) viewProps.html_document = htmlDocument;
+    else delete viewProps.html_document;
+    this.view_props = viewProps;
   };
 
   /**
