@@ -54,7 +54,11 @@ export class ProjectPageService extends APIService {
       });
   }
 
-  async fetchHtmlDocument(workspaceSlug: string, projectId: string, pageId: string): Promise<TPageHtmlDocumentResponse> {
+  async fetchHtmlDocument(
+    workspaceSlug: string,
+    projectId: string,
+    pageId: string
+  ): Promise<TPageHtmlDocumentResponse> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/${pageId}/html/`)
       .then((response) => response?.data)
       .catch((error) => {

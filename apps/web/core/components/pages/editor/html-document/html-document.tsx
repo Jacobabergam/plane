@@ -172,9 +172,10 @@ export const PageHtmlDocument = observer(function PageHtmlDocument(props: Props)
     projectPageService
       .fetchHtmlDocument(workspaceSlug, projectId, pageId)
       .then((response) => {
-        if (isCancelled) return;
+        if (isCancelled) return undefined;
         htmlDocumentCache.set(assetId, response.html);
         setHtml(response.html);
+        return undefined;
       })
       .catch((error: unknown) => {
         if (isCancelled) return;

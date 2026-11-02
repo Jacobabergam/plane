@@ -39,7 +39,10 @@ describe("isHtmlDocumentFile", () => {
 
 describe("normalizeHtmlDocumentSourceUrl", () => {
   it("keeps http(s) links and maps blank to none", () => {
-    assert.equal(normalizeHtmlDocumentSourceUrl("  https://claude.ai/artifact/abc  "), "https://claude.ai/artifact/abc");
+    assert.equal(
+      normalizeHtmlDocumentSourceUrl("  https://claude.ai/artifact/abc  "),
+      "https://claude.ai/artifact/abc"
+    );
     assert.equal(normalizeHtmlDocumentSourceUrl("http://plane.lan/x"), "http://plane.lan/x");
     assert.equal(normalizeHtmlDocumentSourceUrl("   "), "");
   });
