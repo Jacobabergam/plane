@@ -49,6 +49,7 @@ import { PageQuickView } from "../quick-view";
 import { PageChecklistFilter, useChecklistCounts, useChecklistFilter } from "./checklist-filter";
 import { PageCover, PageCoverPicker } from "./cover";
 import { PageEditorHeaderRoot } from "./header";
+import { PageHtmlDocument, PageHtmlDocumentModal } from "./html-document";
 import { PageSubPages } from "./sub-pages";
 import { PageContentBrowser } from "./summary";
 
@@ -102,6 +103,7 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   const checklistContainerRef = useRef<HTMLDivElement>(null);
   // states
   const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
+  const [isHtmlModalOpen, setIsHtmlModalOpen] = useState(false);
   // store hooks
   const { data: currentUser } = useUser();
   const { getWorkspaceBySlug } = useWorkspace();
@@ -282,13 +284,35 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
               {hasCoverImage && (
                 <PageCover className="mt-4" page={page} onChangeCover={() => setIsCoverPickerOpen(true)} />
               )}
+            </div>
+            {/* homelab: the page's HTML design (html-document/), wider than the text column */}
+            {projectId && view_props?.html_document && (
+              <PageHtmlDocument
+                className="mx-auto mt-4 w-full max-w-[1152px] px-page-x"
+                onReplace={() => setIsHtmlModalOpen(true)}
+                page={page}
+                projectId={projectId}
+                workspaceSlug={workspaceSlug}
+              />
+            )}
+            <div className={blockWidthClassName}>
               <PageEditorHeaderRoot
                 page={page}
                 projectId={projectId}
                 onAddCover={projectId ? () => setIsCoverPickerOpen(true) : undefined}
+                onAddHtml={projectId ? () => setIsHtmlModalOpen(true) : undefined}
               />
             </div>
           </div>
+          {projectId && (
+            <PageHtmlDocumentModal
+              isOpen={isHtmlModalOpen}
+              onClose={() => setIsHtmlModalOpen(false)}
+              page={page}
+              projectId={projectId}
+              workspaceSlug={workspaceSlug}
+            />
+          )}
           {projectId && (
             <PageCoverPicker
               isOpen={isCoverPickerOpen}

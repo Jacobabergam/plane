@@ -16,7 +16,29 @@ export type TPageViewProps = {
   full_width?: boolean;
   /** Cover image: an uploaded page asset URL or a bundled gallery image URL. Null or omitted means no cover. */
   cover_image?: string | null;
+  /**
+   * HTML document shown at the top of the page (a design mockup, e.g. a Claude artifact). Written only by the
+   * page's `/html/` route (homelab backend 1.3.1-h10); a page PATCH keeps the stored value.
+   */
+  html_document?: TPageHtmlDocument;
 };
+
+/** Metadata of a page's HTML document. The HTML itself comes from `GET .../pages/<id>/html/`. */
+export type TPageHtmlDocument = {
+  asset_id: string;
+  /** File name, used for downloads. */
+  name: string;
+  /** Size in bytes. */
+  size: number;
+  /** Where the design lives (e.g. the claude.ai artifact link), "" for none. */
+  source_url: string;
+  /** The document's <title> (or first <h1>), "" for none. */
+  title: string;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export type TPageHtmlDocumentResponse = TPageHtmlDocument & { html: string };
 
 export type TPage = {
   access: EPageAccess | undefined;

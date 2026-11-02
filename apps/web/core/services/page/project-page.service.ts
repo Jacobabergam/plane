@@ -6,7 +6,7 @@
 
 // types
 import { API_BASE_URL } from "@plane/constants";
-import type { TDocumentPayload, TPage } from "@plane/types";
+import type { TDocumentPayload, TPage, TPageHtmlDocumentResponse } from "@plane/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";
@@ -49,6 +49,42 @@ export class ProjectPageService extends APIService {
   async create(workspaceSlug: string, projectId: string, data: Partial<TPage>): Promise<TPage> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/`, data)
       .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async fetchHtmlDocument(workspaceSlug: string, projectId: string, pageId: string): Promise<TPageHtmlDocumentResponse> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/${pageId}/html/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  /**
+   * Store or replace the page's HTML document. `sourceUrl` undefined keeps the stored link, "" clears it.
+   */
+  async uploadHtmlDocument(
+    workspaceSlug: string,
+    projectId: string,
+    pageId: string,
+    file: File,
+    sourceUrl?: string
+  ): Promise<TPageHtmlDocumentResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (sourceUrl !== undefined) formData.append("source_url", sourceUrl);
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/${pageId}/html/`, formData)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async removeHtmlDocument(workspaceSlug: string, projectId: string, pageId: string): Promise<void> {
+    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/${pageId}/html/`)
+      .then(() => undefined)
       .catch((error) => {
         throw error?.response?.data;
       });
